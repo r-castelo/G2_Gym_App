@@ -1,0 +1,19 @@
+{
+  "package_id": "com.renato.g2gym",
+  "edition": "202601",
+  "name": "G2 Gym Trainer",
+  "version": "0.1.0",
+  "min_app_version": "0.1.0",
+  "tagline": "Workout trainer for G2 glasses",
+  "description": "Build workout plans on the phone and get step-by-step guidance through exercises on Even Realities G2 glasses.",
+  "author": "Renato Castelo Branco Camargo Pereira",
+  "entrypoint": "index.html",
+  "permissions": {
+    "network": [
+      "evenhub.evenrealities.com"
+    ],
+    "fs": [
+      "./"
+    ]
+  }
+}

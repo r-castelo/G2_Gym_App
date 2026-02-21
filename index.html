@@ -1,0 +1,399 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1.0" />
+    <title>G2 Gym Trainer</title>
+    <style>
+      * { box-sizing: border-box; margin: 0; padding: 0; }
+      body {
+        font-family: -apple-system, "SF Pro Display", "Helvetica Neue", sans-serif;
+        color: #e8e8e8;
+        background: #0a0a0a;
+        min-height: 100vh;
+        display: flex;
+        flex-direction: column;
+      }
+
+      /* --- Status screen --- */
+      .phone-header {
+        padding: 48px 24px 16px;
+        text-align: center;
+      }
+      .phone-header h1 {
+        font-size: 20px;
+        font-weight: 700;
+        letter-spacing: -0.3px;
+        color: #fff;
+      }
+      .phone-header .subtitle {
+        font-size: 13px;
+        color: #888;
+        margin-top: 4px;
+      }
+      .phone-status {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        padding: 24px;
+        gap: 16px;
+      }
+      .status-indicator {
+        width: 10px;
+        height: 10px;
+        border-radius: 50%;
+        background: #555;
+        transition: background 0.3s;
+      }
+      .status-indicator.connecting {
+        background: #f5a623;
+        animation: pulse 1.5s ease-in-out infinite;
+      }
+      .status-indicator.connected { background: #4cd964; }
+      .status-indicator.error { background: #ff3b30; }
+      @keyframes pulse {
+        0%, 100% { opacity: 1; }
+        50% { opacity: 0.3; }
+      }
+      .status-text {
+        font-size: 15px;
+        color: #aaa;
+        text-align: center;
+        line-height: 1.5;
+      }
+      .status-detail {
+        font-size: 12px;
+        color: #666;
+        text-align: center;
+        max-width: 280px;
+      }
+
+      /* --- App content --- */
+      #app-content {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        overflow-y: auto;
+        -webkit-overflow-scrolling: touch;
+        padding: 0 16px 32px;
+      }
+
+      .view-header {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        padding: 16px 0 12px;
+        position: sticky;
+        top: 0;
+        background: #0a0a0a;
+        z-index: 10;
+      }
+      .view-header h2 {
+        flex: 1;
+        font-size: 18px;
+        font-weight: 600;
+        color: #fff;
+      }
+      .header-actions {
+        display: flex;
+        gap: 8px;
+      }
+
+      /* --- Buttons --- */
+      .btn-primary {
+        padding: 10px 16px;
+        border: none;
+        border-radius: 10px;
+        background: #0a84ff;
+        color: #fff;
+        font: 500 14px -apple-system, sans-serif;
+        cursor: pointer;
+        -webkit-tap-highlight-color: transparent;
+      }
+      .btn-primary:active { opacity: 0.7; }
+      .btn-secondary {
+        display: block;
+        width: 100%;
+        padding: 14px;
+        border: 1px solid #333;
+        border-radius: 12px;
+        background: transparent;
+        color: #aaa;
+        font: 500 14px -apple-system, sans-serif;
+        text-align: center;
+        cursor: pointer;
+        -webkit-tap-highlight-color: transparent;
+      }
+      .btn-secondary:active { background: #1a1a1a; border-color: #555; }
+      .btn-back {
+        padding: 8px 12px;
+        border: 1px solid #333;
+        border-radius: 8px;
+        background: transparent;
+        color: #aaa;
+        font: 500 13px -apple-system, sans-serif;
+        cursor: pointer;
+        -webkit-tap-highlight-color: transparent;
+      }
+      .btn-back:active { background: #1a1a1a; }
+      .btn-icon {
+        padding: 8px 12px;
+        border: 1px solid #333;
+        border-radius: 8px;
+        background: transparent;
+        color: #aaa;
+        font: 500 13px -apple-system, sans-serif;
+        cursor: pointer;
+        -webkit-tap-highlight-color: transparent;
+      }
+      .btn-icon:active { background: #1a1a1a; }
+      .btn-danger {
+        display: block;
+        width: 100%;
+        padding: 14px;
+        border: 1px solid #ff3b30;
+        border-radius: 12px;
+        background: transparent;
+        color: #ff3b30;
+        font: 500 14px -apple-system, sans-serif;
+        text-align: center;
+        cursor: pointer;
+        margin-top: 16px;
+        -webkit-tap-highlight-color: transparent;
+      }
+      .btn-danger:active { background: #1a0a0a; }
+
+      /* --- Plan list --- */
+      .plan-list { display: flex; flex-direction: column; gap: 8px; }
+      .plan-card {
+        display: flex;
+        align-items: center;
+        padding: 14px;
+        border: 1px solid #1c1c1e;
+        border-radius: 12px;
+        background: #111;
+        gap: 12px;
+      }
+      .plan-card-info { flex: 1; min-width: 0; }
+      .plan-card-name {
+        font-size: 15px;
+        font-weight: 600;
+        color: #fff;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+      .plan-card-meta { font-size: 12px; color: #888; margin-top: 2px; }
+      .plan-card-actions { display: flex; gap: 6px; flex-shrink: 0; }
+      .btn-start {
+        padding: 8px 14px;
+        border: none;
+        border-radius: 8px;
+        background: #34c759;
+        color: #fff;
+        font: 600 13px -apple-system, sans-serif;
+        cursor: pointer;
+        -webkit-tap-highlight-color: transparent;
+      }
+      .btn-start:active { opacity: 0.7; }
+      .btn-edit, .btn-delete {
+        padding: 8px 10px;
+        border: 1px solid #333;
+        border-radius: 8px;
+        background: transparent;
+        color: #aaa;
+        font: 500 12px -apple-system, sans-serif;
+        cursor: pointer;
+        -webkit-tap-highlight-color: transparent;
+      }
+      .btn-edit:active, .btn-delete:active { background: #1a1a1a; }
+
+      /* --- Editor --- */
+      .form-section {
+        margin-bottom: 12px;
+      }
+      .form-section label {
+        display: block;
+        font-size: 12px;
+        color: #888;
+        margin-bottom: 4px;
+      }
+      .form-section input[type="text"],
+      .form-section textarea,
+      .form-section select {
+        width: 100%;
+        padding: 10px 12px;
+        border: 1px solid #333;
+        border-radius: 10px;
+        background: #1c1c1e;
+        color: #e8e8e8;
+        font: 400 15px -apple-system, sans-serif;
+        outline: none;
+        -webkit-appearance: none;
+      }
+      .form-section textarea {
+        resize: vertical;
+        font-family: "SF Mono", "Menlo", monospace;
+        font-size: 13px;
+      }
+      .form-section select {
+        padding-right: 32px;
+      }
+
+      .block-card {
+        border: 1px solid #1c1c1e;
+        border-radius: 12px;
+        padding: 12px;
+        margin-bottom: 12px;
+        background: #111;
+      }
+      .block-header {
+        display: flex;
+        gap: 8px;
+        margin-bottom: 8px;
+      }
+      .block-header input { flex: 1; padding: 8px; border: 1px solid #333; border-radius: 8px; background: #1c1c1e; color: #e8e8e8; font-size: 14px; }
+      .block-header select { width: 100px; padding: 8px; border: 1px solid #333; border-radius: 8px; background: #1c1c1e; color: #e8e8e8; font-size: 13px; }
+      .btn-remove-block, .btn-remove-ex {
+        width: 32px; height: 32px;
+        border: 1px solid #555; border-radius: 8px;
+        background: transparent; color: #ff3b30;
+        font-size: 14px; cursor: pointer;
+        display: flex; align-items: center; justify-content: center;
+        flex-shrink: 0;
+        -webkit-tap-highlight-color: transparent;
+      }
+      .block-meta {
+        display: flex; gap: 8px; margin-bottom: 8px; flex-wrap: wrap;
+      }
+      .block-meta label {
+        font-size: 12px; color: #888;
+        display: flex; align-items: center; gap: 4px;
+      }
+      .block-meta input[type="number"] {
+        width: 50px; padding: 6px; border: 1px solid #333; border-radius: 6px;
+        background: #1c1c1e; color: #e8e8e8; font-size: 13px; text-align: center;
+      }
+
+      .exercise-row {
+        display: flex; gap: 6px; margin-bottom: 6px; align-items: center; flex-wrap: wrap;
+      }
+      .exercise-row input {
+        padding: 8px; border: 1px solid #333; border-radius: 8px;
+        background: #1c1c1e; color: #e8e8e8; font-size: 13px;
+      }
+      .ex-name { flex: 2; min-width: 100px; }
+      .ex-reps { flex: 1; min-width: 60px; }
+      .ex-load { flex: 1; min-width: 60px; }
+      .ex-notes { flex: 2; min-width: 80px; }
+
+      .btn-add-exercise {
+        display: block; width: 100%; padding: 10px;
+        border: 1px dashed #333; border-radius: 8px;
+        background: transparent; color: #666;
+        font: 500 13px -apple-system, sans-serif;
+        text-align: center; cursor: pointer; margin-top: 8px;
+        -webkit-tap-highlight-color: transparent;
+      }
+      .btn-add-exercise:active { background: #111; }
+
+      /* --- Import --- */
+      .error-text { color: #ff3b30; font-size: 13px; margin-top: 8px; }
+      .import-preview-card {
+        margin-top: 12px; padding: 12px;
+        border: 1px solid #333; border-radius: 12px;
+        background: #111;
+      }
+      .import-preview-card h3 { font-size: 16px; color: #fff; margin-bottom: 8px; }
+      .import-preview-card p { font-size: 13px; color: #aaa; margin-bottom: 8px; }
+      .preview-block { font-size: 13px; color: #ccc; margin-bottom: 6px; line-height: 1.5; }
+
+      /* --- Active workout --- */
+      .active-card {
+        padding: 20px; border: 1px solid #1c1c1e; border-radius: 12px;
+        background: #111; text-align: center;
+      }
+      .active-plan-name { font-size: 18px; font-weight: 600; color: #fff; }
+      .active-status { font-size: 14px; color: #4cd964; margin-top: 4px; }
+      .active-progress { font-size: 13px; color: #888; margin-top: 8px; }
+      .active-exercise { font-size: 22px; font-weight: 700; color: #fff; margin-top: 16px; }
+      .active-prescription { font-size: 16px; color: #aaa; margin-top: 4px; }
+      .active-block { font-size: 13px; color: #666; margin-top: 8px; }
+
+      /* --- History --- */
+      .log-list { display: flex; flex-direction: column; gap: 8px; }
+      .log-card {
+        display: flex; align-items: center; gap: 12px;
+        padding: 12px; border: 1px solid #1c1c1e; border-radius: 12px;
+        background: #111;
+      }
+      .log-icon {
+        width: 32px; height: 32px; border-radius: 50%;
+        display: flex; align-items: center; justify-content: center;
+        font-size: 16px; font-weight: 700; flex-shrink: 0;
+      }
+      .log-icon.completed { background: #1a3a1e; color: #4cd964; }
+      .log-icon.abandoned { background: #3a1a1a; color: #ff3b30; }
+      .log-info { flex: 1; min-width: 0; }
+      .log-name { font-size: 15px; color: #fff; font-weight: 500; }
+      .log-meta { font-size: 12px; color: #888; margin-top: 2px; }
+
+      /* --- Settings --- */
+      .settings-row {
+        display: flex; align-items: center; gap: 8px;
+        margin-top: 16px; padding: 12px;
+        border: 1px solid #1c1c1e; border-radius: 10px;
+        font-size: 14px; color: #aaa;
+      }
+      .settings-row select {
+        padding: 6px 10px; border: 1px solid #333; border-radius: 8px;
+        background: #1c1c1e; color: #e8e8e8; font-size: 14px;
+      }
+
+      .empty-state {
+        padding: 48px 24px; text-align: center;
+        color: #666; font-size: 14px;
+      }
+
+      .confirm-row {
+        display: flex; align-items: center; gap: 8px;
+        margin-top: 12px; padding: 12px;
+        border: 1px solid #ff3b30; border-radius: 10px;
+        background: #1a0a0a;
+        font-size: 14px; color: #ff3b30;
+      }
+      .confirm-row span { flex: 1; }
+      .confirm-row .btn-danger {
+        width: auto; margin-top: 0; padding: 8px 14px;
+        font-size: 13px; flex-shrink: 0;
+      }
+      .confirm-row .btn-secondary {
+        width: auto; padding: 8px 14px;
+        font-size: 13px; flex-shrink: 0;
+      }
+
+      .hidden { display: none !important; }
+    </style>
+  </head>
+  <body>
+    <!-- Status screen -->
+    <div id="status-screen">
+      <div class="phone-header">
+        <h1>G2 Gym Trainer</h1>
+        <div class="subtitle">Workout trainer for Even Realities G2</div>
+      </div>
+      <div class="phone-status" id="status-area">
+        <div class="status-indicator connecting" id="status-dot"></div>
+        <div class="status-text" id="status-text">Connecting to glasses...</div>
+        <div class="status-detail" id="status-detail"></div>
+      </div>
+    </div>
+
+    <!-- App content -->
+    <div id="app-content" class="hidden"></div>
+
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>
