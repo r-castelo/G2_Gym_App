@@ -1,3 +1,5 @@
+import "./phone/phone.css";
+
 import { Controller } from "./app/controller";
 import { GlassAdapterImpl } from "./adapters/glassAdapter";
 import { StorageAdapterImpl } from "./adapters/storageAdapter";

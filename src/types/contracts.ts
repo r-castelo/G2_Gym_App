@@ -39,6 +39,7 @@ export interface TextListScreen {
   kind: "textList";
   content: string;
   actions: string[];
+  footer?: string;
 }
 
 export interface ListScreen {

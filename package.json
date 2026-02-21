@@ -10,7 +10,7 @@
     "preview": "vite preview",
     "typecheck": "tsc --noEmit",
     "test": "tsx --test tests/**/*.test.ts",
-    "sim": "evenhub-simulator http://localhost:5173",
+    "sim": "node ./node_modules/@evenrealities/evenhub-simulator/bin/index.js http://localhost:5173",
     "qr": "evenhub qr",
     "pack": "npm run build && evenhub pack app.json ./dist --output g2-gym-app.ehpk"
   },

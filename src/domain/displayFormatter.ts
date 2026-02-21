@@ -11,10 +11,8 @@ import type {
 } from "../types/contracts";
 import { ACTION_LABELS } from "../config/constants";
 import {
-  countTotalExercises,
-  countTotalSets,
-  flatExerciseIndex,
-  flatSetIndex,
+  getExerciseAtCursor,
+  nextStep,
   peekNextExercise,
 } from "./workoutEngine";
 
@@ -41,15 +39,6 @@ export function formatLoad(l: LoadSpec, _unit?: WeightUnit): string {
     case "percentage": return `${l.value}%`;
     case "none": return "";
   }
-}
-
-function formatPrescriptionShort(exercise: Exercise): string {
-  const load = formatLoad(exercise.prescribedLoad);
-  const reps = formatReps(exercise.prescribedReps);
-  if (load) {
-    return `${load} ${reps}`;
-  }
-  return reps;
 }
 
 /** Format a compact "name + prescription" for NEXT line. */
@@ -79,38 +68,28 @@ export function formatExerciseScreen(
   setsCompleted: number,
   totalSets: number,
 ): TextListScreen {
-  const exNum = flatExerciseIndex(cursor, plan);
-  const totalEx = countTotalExercises(plan);
+  const blockLine = `Block ${cursor.blockIndex + 1} out of ${plan.blocks.length} \u00B7 ${truncate(block.name, 32)}`;
+  const divider = "-".repeat(39);
+  const nowLine = `NOW: ${exercise.name.toUpperCase()} ${formatReps(exercise.prescribedReps).toUpperCase()} \u00B7 Set ${cursor.roundNumber}/${block.rounds}`;
 
-  // Line 1: Context — position + name
-  const contextLine = `Exercise ${exNum}/${totalEx} \u00B7 ${truncate(exercise.name, 30)}`;
+  const nextResult = nextStep(cursor, plan);
+  let nextLine = "Next: Workout Complete";
+  if (!nextResult.done) {
+    const nextInfo = getExerciseAtCursor(nextResult.cursor, plan);
+    const nextBlockRounds = plan.blocks[nextResult.cursor.blockIndex]?.rounds ?? block.rounds;
+    if (nextInfo) {
+      nextLine = `Next: ${nextInfo.exercise.name} ${formatReps(nextInfo.exercise.prescribedReps)} \u00B7 Set ${nextResult.cursor.roundNumber}/${nextBlockRounds}`;
+    }
+  }
 
-  // Line 3: NOW — what to do right now (uppercase, prominent)
-  const nowPrescription = formatPrescriptionShort(exercise);
-  const nowLine = `NOW: ${exercise.name.toUpperCase()} ${nowPrescription.toUpperCase()}`;
-
-  // Line 4: NEXT — what's coming
-  const next = peekNextExercise(cursor, plan);
-  const nextLine = next
-    ? `NEXT: ${formatNextPreview(next)}`
-    : "NEXT: Done!";
-
-  // Line 5: Progress percentage (right-aligned feel)
   const pct = totalSets > 0 ? Math.round((setsCompleted / totalSets) * 100) : 0;
-  const progressLine = `${pct}%`;
-
-  const lines = [
-    contextLine,
-    "",
-    nowLine,
-    nextLine,
-    progressLine,
-  ];
+  const footer = `${truncate(plan.name, 20)} \u00B7 ${pct}% Completed`;
 
   return {
     kind: "textList",
-    content: lines.join("\n"),
-    actions: [ACTION_LABELS.done, ACTION_LABELS.skip],
+    content: [blockLine, "", divider, nowLine, divider, nextLine].join("\n"),
+    actions: ["Done", ACTION_LABELS.skip],
+    footer,
   };
 }
 

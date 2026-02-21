@@ -15,6 +15,7 @@ import {
   CONTAINER_IDS,
   CONTAINER_NAMES,
   GLASS_LAYOUT,
+  TEXT_LAYOUT,
   TIMING,
 } from "../config/constants";
 import type {
@@ -31,6 +32,7 @@ type ScreenKind = "textList" | "list" | "text" | "message" | null;
  *
  * Screen types:
  * - TextListScreen: text container (top) + list container (bottom actions)
+ *   with optional non-interactive footer text appended in the text container
  * - ListScreen: full-page list container (routine selection)
  * - TextScreen: single text container
  *
@@ -69,7 +71,7 @@ export class GlassAdapterImpl implements GlassAdapter {
   async showScreen(screen: GlassScreen): Promise<void> {
     switch (screen.kind) {
       case "textList":
-        await this.renderTextList(screen.content, screen.actions);
+        await this.renderTextList(screen.content, screen.actions, screen.footer);
         this.currentScreenKind = "textList";
         break;
 
@@ -129,24 +131,46 @@ export class GlassAdapterImpl implements GlassAdapter {
    * Render text + list layout:
    * - Text container at top (info/timer content, isEventCapture=0)
    * - List container at bottom (action items like Done/Skip, isEventCapture=1)
+   * - Optional footer text container on the same row as actions (isEventCapture=0)
    */
-  private async renderTextList(content: string, actions: string[]): Promise<void> {
+  private async renderTextList(
+    content: string,
+    actions: string[],
+    footer?: string,
+  ): Promise<void> {
+    const footerText = footer?.trim() ?? "";
+    const hasFooter = footerText.length > 0;
     const textContainer = new TextContainerProperty({
       xPosition: GLASS_LAYOUT.x,
       yPosition: GLASS_LAYOUT.y,
       width: GLASS_LAYOUT.textWidth,
-      height: GLASS_LAYOUT.textHeight,
+      height: hasFooter ? GLASS_LAYOUT.textHeightWithFooter : GLASS_LAYOUT.textHeight,
       containerID: CONTAINER_IDS.text,
       containerName: CONTAINER_NAMES.text,
       isEventCapture: 0,
       content: content.slice(0, 1000),
     });
 
+    const textContainers: TextContainerProperty[] = [textContainer];
+    if (hasFooter) {
+      textContainers.push(new TextContainerProperty({
+        xPosition: GLASS_LAYOUT.footerX,
+        yPosition: GLASS_LAYOUT.footerY,
+        width: GLASS_LAYOUT.footerWidth,
+        height: GLASS_LAYOUT.footerHeight,
+        paddingLength: GLASS_LAYOUT.footerPadding,
+        containerID: CONTAINER_IDS.footer,
+        containerName: CONTAINER_NAMES.footer,
+        isEventCapture: 0,
+        content: this.rightAlignFooter(footerText).slice(0, 1000),
+      }));
+    }
+
     const actionList = new ListContainerProperty({
-      xPosition: GLASS_LAYOUT.x,
-      yPosition: GLASS_LAYOUT.actionY,
-      width: GLASS_LAYOUT.actionWidth,
-      height: GLASS_LAYOUT.actionHeight,
+      xPosition: hasFooter ? GLASS_LAYOUT.actionXWithFooter : GLASS_LAYOUT.x,
+      yPosition: hasFooter ? GLASS_LAYOUT.actionYWithFooter : GLASS_LAYOUT.actionY,
+      width: hasFooter ? GLASS_LAYOUT.actionWidthWithFooter : GLASS_LAYOUT.actionWidth,
+      height: hasFooter ? GLASS_LAYOUT.actionHeightWithFooter : GLASS_LAYOUT.actionHeight,
       containerID: CONTAINER_IDS.action,
       containerName: CONTAINER_NAMES.action,
       isEventCapture: 1,
@@ -158,9 +182,25 @@ export class GlassAdapterImpl implements GlassAdapter {
     });
 
     await this.renderContainers({
-      textObject: [textContainer],
+      textObject: textContainers,
       listObject: [actionList],
     });
+  }
+
+  /**
+   * Right-align footer text within the footer container.
+   * SDK text containers do not expose a text-align option, so we pad to fit.
+   */
+  private rightAlignFooter(text: string): string {
+    const normalized = text.replace(/\s+/g, " ").trim();
+    if (!normalized) return "";
+
+    const charWidthPx = GLASS_LAYOUT.textWidth / TEXT_LAYOUT.CHARS_PER_LINE;
+    const usableWidthPx = Math.max(1, GLASS_LAYOUT.footerWidth - (GLASS_LAYOUT.footerPadding * 2));
+    const maxChars = Math.max(1, Math.floor(usableWidthPx / charWidthPx));
+    const clipped = normalized.length > maxChars ? normalized.slice(0, maxChars) : normalized;
+    const leftPad = Math.max(0, maxChars - clipped.length);
+    return `${" ".repeat(leftPad)}${clipped}`;
   }
 
   /**

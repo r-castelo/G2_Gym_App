@@ -70,7 +70,7 @@ describe("formatLoad", () => {
 });
 
 describe("formatExerciseScreen", () => {
-  it("returns a TextListScreen with context, NOW, NEXT, progress, and actions", () => {
+  it("returns a TextListScreen with block context, NOW/NEXT set lines, and footer container text", () => {
     const plan = makePlan();
     const cursor: WorkoutCursor = { blockIndex: 0, exerciseIndex: 0, roundNumber: 2, phase: "exercise" };
     const block = plan.blocks[0]!;
@@ -79,21 +79,15 @@ describe("formatExerciseScreen", () => {
     const screen = formatExerciseScreen(cursor, plan, block, exercise, 2, 6);
 
     assert.equal(screen.kind, "textList");
-    // Context line: position + name
-    assert.ok(screen.content.includes("Exercise 1/2"));
-    assert.ok(screen.content.includes("Bench Press"));
-    // NOW line: uppercase
-    assert.ok(screen.content.includes("NOW: BENCH PRESS"));
-    assert.ok(screen.content.includes("80KG"));
-    assert.ok(screen.content.includes("10 REPS"));
-    // NEXT line
-    assert.ok(screen.content.includes("NEXT: Incline Fly"));
-    // Progress
-    assert.ok(screen.content.includes("33%"));
-    assert.deepEqual(screen.actions, ["\u2713 Done", "Skip"]);
+    assert.ok(screen.content.includes("Block 1 out of 1 \u00B7 Chest Superset"));
+    assert.ok(screen.content.includes("---------------------------------------"));
+    assert.ok(screen.content.includes("NOW: BENCH PRESS 10 REPS \u00B7 Set 2/3"));
+    assert.ok(screen.content.includes("Next: Incline Fly 12 reps \u00B7 Set 2/3"));
+    assert.deepEqual(screen.actions, ["Done", "Skip"]);
+    assert.equal(screen.footer, "Push Day A \u00B7 33% Completed");
   });
 
-  it("shows 'NEXT: Done!' when no next exercise", () => {
+  it("shows completion next line when there is no next set", () => {
     const plan = makePlan();
     // Last exercise of last round of last block
     const cursor: WorkoutCursor = { blockIndex: 0, exerciseIndex: 1, roundNumber: 3, phase: "exercise" };
@@ -101,7 +95,7 @@ describe("formatExerciseScreen", () => {
     const exercise = block.exercises[1]!;
 
     const screen = formatExerciseScreen(cursor, plan, block, exercise, 5, 6);
-    assert.ok(screen.content.includes("NEXT: Done!"));
+    assert.ok(screen.content.includes("Next: Workout Complete"));
   });
 
   it("shows 0% progress when no sets completed", () => {
@@ -111,10 +105,10 @@ describe("formatExerciseScreen", () => {
     const exercise = block.exercises[0]!;
 
     const screen = formatExerciseScreen(cursor, plan, block, exercise, 0, 6);
-    assert.ok(screen.content.includes("0%"));
+    assert.equal(screen.footer, "Push Day A \u00B7 0% Completed");
   });
 
-  it("shows bodyweight in NOW line", () => {
+  it("shows reps-only NOW line even for bodyweight exercises", () => {
     const plan = makePlan();
     plan.blocks[0]!.exercises[0]!.prescribedLoad = { type: "bodyweight" };
     const cursor: WorkoutCursor = { blockIndex: 0, exerciseIndex: 0, roundNumber: 1, phase: "exercise" };
@@ -122,7 +116,7 @@ describe("formatExerciseScreen", () => {
     const exercise = block.exercises[0]!;
 
     const screen = formatExerciseScreen(cursor, plan, block, exercise, 0, 6);
-    assert.ok(screen.content.includes("NOW: BENCH PRESS BW 10 REPS"));
+    assert.ok(screen.content.includes("NOW: BENCH PRESS 10 REPS \u00B7 Set 1/3"));
   });
 });
 
