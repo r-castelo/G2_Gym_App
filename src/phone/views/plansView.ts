@@ -1,6 +1,11 @@
-import { countTotalSets } from "../../domain/workoutEngine";
+import { countTotalExercises, countTotalSets } from "../../domain/workoutEngine";
 import type { TrainingPlan, WeightUnit } from "../../types/contracts";
 import { esc } from "../utils";
+
+function formatWeekdayLabel(day: TrainingPlan["weekday"]): string {
+  if (!day) return "";
+  return `${day.charAt(0).toUpperCase()}${day.slice(1)}`;
+}
 
 export interface PlansViewModel {
   plans: TrainingPlan[];
@@ -20,10 +25,10 @@ export function renderPlansView(model: PlansViewModel): string {
         ${plans.map((plan) => renderPlanCard(plan, deletePlanId === plan.id)).join("")}
       </section>`;
 
-  return `<main class="phone-screen">
+  return `<main class="phone-screen plans-screen">
     <header class="screen-header">
       <div>
-        <p class="screen-kicker">Phone Console</p>
+        <p class="screen-kicker">Fitness HUD</p>
         <h1>Training Plans</h1>
       </div>
       <div class="header-actions">
@@ -49,13 +54,28 @@ export function renderPlansView(model: PlansViewModel): string {
 
 function renderPlanCard(plan: TrainingPlan, deleting: boolean): string {
   const setCount = countTotalSets(plan);
+  const exerciseCount = countTotalExercises(plan);
   const blockCount = plan.blocks.length;
-  const weekday = plan.weekday ? plan.weekday.toUpperCase() : "";
+  const weekday = formatWeekdayLabel(plan.weekday);
+  const totalRounds = plan.blocks.reduce((sum, block) => sum + block.rounds, 0);
+
+  const flowPreview = plan.blocks.slice(0, 2).map((block, index) => {
+    const name = block.name.trim() || `Block ${index + 1}`;
+    return `${esc(name)} (${block.blockType} x${block.rounds})`;
+  }).join(" \u2192 ");
+  const flowSuffix = plan.blocks.length > 2 ? ` \u2192 +${plan.blocks.length - 2} more` : "";
 
   return `<article class="panel plan-card ${deleting ? "plan-delete-pending" : ""}">
     <div class="plan-body">
       <h2>${esc(plan.name)}</h2>
-      <p>${blockCount} blocks \u00B7 ${setCount} sets${weekday ? ` \u00B7 ${weekday}` : ""}</p>
+      <div class="plan-meta-row">
+        <span class="plan-stat-chip">${blockCount} blocks</span>
+        <span class="plan-stat-chip">${setCount} sets</span>
+        <span class="plan-stat-chip">${exerciseCount} exercises</span>
+        <span class="plan-stat-chip">${totalRounds} rounds</span>
+        <span class="plan-stat-chip">${weekday ? `Day ${weekday}` : "No weekday"}</span>
+      </div>
+      <p class="plan-flow-line">${flowPreview}${flowSuffix}</p>
     </div>
     <div class="plan-actions">
       <button type="button" class="btn btn-primary btn-small" data-action="start-plan" data-plan-id="${plan.id}">Start</button>

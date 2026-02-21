@@ -1,6 +1,6 @@
 :root {
   color-scheme: dark;
-  font-family: "Trebuchet MS", "Arial Black", "Segoe UI", sans-serif;
+  font-family: "Avenir Next", "Segoe UI", "Trebuchet MS", sans-serif;
   --retro-bg: #17141f;
   --retro-grid-a: #1f1730;
   --retro-grid-b: #171a2b;
@@ -34,6 +34,11 @@
   --retro-error-text: #ffe6f1;
   --retro-dialog-bg: #222029;
   --retro-toast-bg: #2a2833;
+  --retro-card-bg: #ffffff;
+  --retro-card-text: #1b1626;
+  --retro-card-muted: #59506e;
+  --retro-card-border: #2d2350;
+  --retro-card-shadow: #bca8ea;
 }
 
 html,
@@ -123,7 +128,12 @@ h1 {
   font-size: 1.16rem;
   line-height: 1.3;
   letter-spacing: 0.02em;
-  text-transform: uppercase;
+  text-transform: none;
+}
+
+.phone-screen .screen-header h1,
+.phone-screen .screen-header .screen-kicker {
+  color: #fffaff;
 }
 
 h2 {
@@ -141,10 +151,11 @@ h3 {
 .screen-kicker,
 .block-tag,
 .hierarchy-path {
-  font-family: "Courier New", monospace;
-  font-size: 0.7rem;
-  text-transform: uppercase;
-  letter-spacing: 0.1em;
+  font-family: "Avenir Next", "Segoe UI", sans-serif;
+  font-size: 0.9rem;
+  text-transform: none;
+  letter-spacing: 0.008em;
+  font-weight: 700;
   color: var(--retro-muted);
 }
 
@@ -174,10 +185,11 @@ h3 {
   padding: 5px 9px;
   border: 2px solid var(--retro-border);
   box-shadow: 2px 2px 0 var(--retro-border);
-  font-family: "Courier New", monospace;
-  font-size: 0.7rem;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
+  font-family: "Avenir Next", "Segoe UI", sans-serif;
+  font-size: 0.84rem;
+  letter-spacing: 0.008em;
+  text-transform: none;
+  font-weight: 700;
   background: var(--retro-panel-alt);
   color: var(--retro-text);
   white-space: nowrap;
@@ -237,8 +249,8 @@ h3 {
   font: inherit;
   font-size: 0.88rem;
   font-weight: 800;
-  letter-spacing: 0.02em;
-  text-transform: uppercase;
+  letter-spacing: 0.01em;
+  text-transform: none;
   line-height: 1.1;
   cursor: pointer;
   transition: transform 90ms linear, box-shadow 90ms linear, filter 120ms linear;
@@ -304,6 +316,32 @@ textarea:focus-visible {
   gap: 10px;
 }
 
+.plan-meta-row {
+  margin-top: 8px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.plan-stat-chip {
+  display: inline-flex;
+  align-items: center;
+  border: 1px solid #c8bee6;
+  background: #f3eefc;
+  color: #37295e;
+  font-size: 0.74rem;
+  font-weight: 700;
+  line-height: 1;
+  padding: 4px 6px;
+}
+
+.plan-flow-line {
+  margin-top: 8px;
+  color: #4f4468;
+  font-size: 0.87rem;
+  line-height: 1.45;
+}
+
 .plan-delete-pending {
   opacity: 0.65;
 }
@@ -318,6 +356,126 @@ textarea:focus-visible {
   background: var(--retro-panel-alt);
 }
 
+.plans-screen .panel,
+.editor-screen .panel,
+.history-screen .panel {
+  background: var(--retro-card-bg);
+  color: var(--retro-card-text);
+  border-color: var(--retro-card-border);
+  box-shadow: 4px 4px 0 var(--retro-card-shadow);
+}
+
+.plans-screen .screen-kicker,
+.editor-screen .screen-kicker,
+.history-screen .screen-kicker,
+.plans-screen .muted,
+.editor-screen .muted,
+.history-screen .muted,
+.plans-screen .plan-body p,
+.history-screen .history-card p,
+.plans-screen .field > span,
+.editor-screen .field > span {
+  color: var(--retro-card-muted);
+}
+
+.plans-screen input,
+.plans-screen select,
+.editor-screen input,
+.editor-screen select,
+.editor-screen textarea {
+  background: #ffffff;
+  color: var(--retro-card-text);
+  border-color: var(--retro-card-border);
+}
+
+.plans-screen input::placeholder,
+.editor-screen input::placeholder,
+.editor-screen textarea::placeholder {
+  color: #746b8d;
+  opacity: 0.62;
+}
+
+.plans-screen .settings-panel,
+.editor-screen .hierarchy-panel,
+.editor-screen .action-bar {
+  background: #f8f5ff;
+}
+
+.editor-screen .set-panel {
+  background: #f3f4f8;
+  border-color: #b4a8d6;
+  box-shadow: 3px 3px 0 #d3cbe9;
+}
+
+.editor-screen h1,
+.editor-screen h2,
+.editor-screen h3 {
+  color: #211938;
+}
+
+.editor-screen .screen-kicker,
+.editor-screen .hierarchy-path,
+.editor-screen .block-tag,
+.editor-screen .field > span {
+  color: #2d2250;
+  font-size: 0.9rem;
+  letter-spacing: 0.008em;
+  text-transform: none;
+  font-weight: 700;
+}
+
+.editor-screen .muted,
+.editor-screen .active-next-line,
+.editor-screen .status-detail {
+  color: #40375a;
+}
+
+.editor-screen .field {
+  color: #2b2244;
+}
+
+.editor-screen select {
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  padding-right: 34px;
+  background-image:
+    linear-gradient(45deg, transparent 50%, #59488e 50%),
+    linear-gradient(135deg, #59488e 50%, transparent 50%),
+    linear-gradient(#ffffff, #ffffff);
+  background-position:
+    calc(100% - 18px) calc(50% - 2px),
+    calc(100% - 12px) calc(50% - 2px),
+    100% 0;
+  background-size:
+    6px 6px,
+    6px 6px,
+    2.3rem 100%;
+  background-repeat: no-repeat;
+}
+
+.history-screen .status-pill {
+  border-width: 1px;
+  box-shadow: none;
+  font-family: "Avenir Next", "Segoe UI", sans-serif;
+  letter-spacing: 0.008em;
+  font-size: 0.84rem;
+  text-transform: none;
+  font-weight: 700;
+}
+
+.history-screen .log-completed {
+  background: #e7f0ff;
+  border-color: #9ab8ee;
+  color: #2c427a;
+}
+
+.history-screen .log-abandoned {
+  background: #ffe8f1;
+  border-color: #e5a2bc;
+  color: #7f3557;
+}
+
 .field {
   display: flex;
   flex-direction: column;
@@ -326,10 +484,11 @@ textarea:focus-visible {
 }
 
 .field > span {
-  font-family: "Courier New", monospace;
-  font-size: 0.74rem;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
+  font-family: "Avenir Next", "Segoe UI", sans-serif;
+  font-size: 0.9rem;
+  letter-spacing: 0.008em;
+  text-transform: none;
+  font-weight: 700;
   color: var(--retro-muted);
 }
 
@@ -449,10 +608,11 @@ textarea {
 }
 
 .active-block-title {
-  font-family: "Courier New", monospace;
-  font-size: 0.78rem;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
+  font-family: "Avenir Next", "Segoe UI", sans-serif;
+  font-size: 0.9rem;
+  letter-spacing: 0.008em;
+  text-transform: none;
+  font-weight: 700;
   color: var(--retro-muted);
 }
 
@@ -568,7 +728,7 @@ textarea {
   font-size: 0.86rem;
   line-height: 1.25;
   font-weight: 700;
-  text-transform: uppercase;
+  text-transform: none;
   transform: translateY(8px);
   opacity: 0;
   transition: transform 140ms linear, opacity 140ms linear;

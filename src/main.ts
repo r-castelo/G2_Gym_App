@@ -49,5 +49,5 @@ async function bootstrap(): Promise<void> {
 
 void bootstrap().catch((error: unknown) => {
   setPhoneState("error", "Failed to start", String(error));
-  console.error("G2 Gym Trainer failed to start", error);
+  console.error("Fitness HUD failed to start", error);
 });

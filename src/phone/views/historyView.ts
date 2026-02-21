@@ -8,12 +8,12 @@ export interface HistoryViewModel {
 export function renderHistoryView(model: HistoryViewModel): string {
   const { logs } = model;
 
-  return `<main class="phone-screen">
+  return `<main class="phone-screen history-screen">
     <header class="screen-header">
       <div class="header-leading">
         <button type="button" class="btn btn-ghost" data-action="open-plans">Back</button>
         <div>
-          <p class="screen-kicker">History</p>
+          <p class="screen-kicker">Fitness HUD</p>
           <h1>Workout Logs</h1>
         </div>
       </div>

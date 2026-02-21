@@ -12,7 +12,7 @@ export function renderStatusView(status: PhoneStatusState): string {
 
   return `<main class="phone-screen status-view">
     <section class="panel status-panel">
-      <p class="screen-kicker">G2 Gym Trainer</p>
+      <p class="screen-kicker">Fitness HUD</p>
       <div class="status-pill status-${status.state}">${statusLabel(status.state)}</div>
       ${showSpinner ? "<div class=\"status-spinner\" aria-hidden=\"true\"></div>" : ""}
       <h1 id="status-text" class="status-title">${esc(status.text)}</h1>

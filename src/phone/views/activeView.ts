@@ -35,10 +35,10 @@ export function renderActiveView(model: ActiveViewModel): string {
   return `<main class="phone-screen">
     <header class="screen-header">
       <div>
-        <p class="screen-kicker">Active</p>
+        <p class="screen-kicker">Fitness HUD</p>
         <h1>${esc(session.planName)}</h1>
       </div>
-      <div class="status-pill status-connected">${esc(statusText.toUpperCase())}</div>
+      <div class="status-pill status-connected">${esc(statusText)}</div>
     </header>
 
     <section class="panel active-panel">

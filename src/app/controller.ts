@@ -33,6 +33,10 @@ export interface ControllerOptions {
 }
 
 export class Controller {
+  private static readonly IDLE_READY_MESSAGE = "FITNESS HUD\n\nTap to select routine\nor start from phone";
+  private static readonly IDLE_EMPTY_MESSAGE = "FITNESS HUD\n\nNo plans found\nCreate one on your phone";
+  private static readonly ABANDONED_MESSAGE = "FITNESS HUD\n\nWorkout abandoned\n\nTap to select routine\nor start from phone";
+
   private readonly glass: GlassAdapter;
   private readonly storage: StorageAdapter;
   private readonly wakeLock: WakeLockService | null;
@@ -83,9 +87,9 @@ export class Controller {
       this.state.setIdle();
       const plans = this.storage.loadPlans();
       if (plans.length > 0) {
-        await this.glass.showMessage("G2 GYM\n\nTap to select routine\nor start from phone");
+        await this.glass.showMessage(Controller.IDLE_READY_MESSAGE);
       } else {
-        await this.glass.showMessage("G2 GYM\n\nNo plans found\nCreate one on your phone");
+        await this.glass.showMessage(Controller.IDLE_EMPTY_MESSAGE);
       }
     }
 
@@ -142,7 +146,7 @@ export class Controller {
     this.state.setIdle();
     this.notifySessionChange();
 
-    await this.glass.showMessage("G2 GYM\n\nWorkout abandoned\n\nTap to select routine\nor start from phone");
+    await this.glass.showMessage(Controller.ABANDONED_MESSAGE);
     await this.wakeLock?.release();
   }
 
@@ -217,7 +221,7 @@ export class Controller {
     if (mode === "ERROR") {
       if (gesture.kind === "TAP") {
         this.state.setIdle();
-        await this.glass.showMessage("G2 GYM\n\nTap to select routine\nor start from phone");
+        await this.glass.showMessage(Controller.IDLE_READY_MESSAGE);
       }
     }
   }
@@ -453,7 +457,7 @@ export class Controller {
   private async handleCompleteDismiss(): Promise<void> {
     this.state.setIdle();
     this.notifySessionChange();
-    await this.glass.showMessage("G2 GYM\n\nTap to select routine\nor start from phone");
+    await this.glass.showMessage(Controller.IDLE_READY_MESSAGE);
     await this.wakeLock?.release();
   }
 
@@ -497,9 +501,9 @@ export class Controller {
     if (!session) {
       const plans = this.storage.loadPlans();
       if (plans.length > 0) {
-        await this.glass.showMessage("G2 GYM\n\nTap to select routine\nor start from phone");
+        await this.glass.showMessage(Controller.IDLE_READY_MESSAGE);
       } else {
-        await this.glass.showMessage("G2 GYM\n\nNo plans found\nCreate one on your phone");
+        await this.glass.showMessage(Controller.IDLE_EMPTY_MESSAGE);
       }
       return;
     }
@@ -531,7 +535,7 @@ export class Controller {
         break;
       }
       default:
-        await this.glass.showMessage("G2 GYM\n\nTap to select routine\nor start from phone");
+        await this.glass.showMessage(Controller.IDLE_READY_MESSAGE);
     }
   }
 

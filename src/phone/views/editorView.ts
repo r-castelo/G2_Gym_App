@@ -10,17 +10,18 @@ export interface EditorViewModel {
 
 const blockTypes: BlockType[] = ["straight", "superset", "circuit"];
 const weekdays = ["mon", "tue", "wed", "thu", "fri", "sat", "sun"] as const;
+const weekdayLabel = (day: (typeof weekdays)[number]): string => `${day.charAt(0).toUpperCase()}${day.slice(1)}`;
 
 export function renderEditorView(model: EditorViewModel): string {
   const { plan, error, exportMarkdown } = model;
   const totalSets = countTotalSets(plan);
 
-  return `<main class="phone-screen">
+  return `<main class="phone-screen editor-screen">
     <header class="screen-header">
       <div class="header-leading">
         <button type="button" class="btn btn-ghost" data-action="open-plans">Back</button>
         <div>
-          <p class="screen-kicker">Builder</p>
+          <p class="screen-kicker">Fitness HUD</p>
           <h1>Plan Editor</h1>
         </div>
       </div>
@@ -43,7 +44,7 @@ export function renderEditorView(model: EditorViewModel): string {
           <span>Weekday</span>
           <select data-model="plan-weekday" aria-label="Weekday">
             <option value="" ${!plan.weekday ? "selected" : ""}>None</option>
-            ${weekdays.map((day) => `<option value="${day}" ${plan.weekday === day ? "selected" : ""}>${day.toUpperCase()}</option>`).join("")}
+            ${weekdays.map((day) => `<option value="${day}" ${plan.weekday === day ? "selected" : ""}>${weekdayLabel(day)}</option>`).join("")}
           </select>
         </label>
       </div>

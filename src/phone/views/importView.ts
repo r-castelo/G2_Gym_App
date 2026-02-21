@@ -17,7 +17,7 @@ export function renderImportView(model: ImportViewModel): string {
       <div class="header-leading">
         <button type="button" class="btn btn-ghost" data-action="open-plans">Back</button>
         <div>
-          <p class="screen-kicker">Import</p>
+          <p class="screen-kicker">Fitness HUD</p>
           <h1>Markdown Plan</h1>
         </div>
       </div>
