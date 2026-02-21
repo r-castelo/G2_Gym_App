@@ -11,9 +11,10 @@ import type {
 } from "../types/contracts";
 import { ACTION_LABELS } from "../config/constants";
 import {
+  countTotalSets,
+  flatSetIndex,
   getExerciseAtCursor,
   nextStep,
-  peekNextExercise,
 } from "./workoutEngine";
 
 const MAX_NAME_LEN = 40;
@@ -39,12 +40,6 @@ export function formatLoad(l: LoadSpec, _unit?: WeightUnit): string {
     case "percentage": return `${l.value}%`;
     case "none": return "";
   }
-}
-
-/** Format a compact "name + prescription" for NEXT line. */
-function formatNextPreview(next: { name: string; reps: string; load: string }): string {
-  const parts = [next.load, next.reps].filter(Boolean).join(" ");
-  return parts ? `${next.name} ${parts}` : next.name;
 }
 
 /**
@@ -112,10 +107,17 @@ export function formatRestScreen(
   plan: TrainingPlan,
   isBlockRest: boolean,
 ): TextListScreen {
+  const totalSets = countTotalSets(plan);
+  const estimatedCompleted = flatSetIndex(cursor, plan) - 1;
+  const setsCompleted = Math.max(0, Math.min(totalSets, estimatedCompleted));
+  const pct = totalSets > 0 ? Math.round((setsCompleted / totalSets) * 100) : 0;
+  const footer = `${truncate(plan.name, 20)} \u00B7 ${pct}% Completed`;
+
   return {
     kind: "textList",
     content: formatRestTimerText(remainingSeconds, cursor, plan, isBlockRest),
     actions: [ACTION_LABELS.skipRest],
+    footer,
   };
 }
 
@@ -132,20 +134,24 @@ export function formatRestTimerText(
   const mins = Math.floor(remainingSeconds / 60);
   const secs = remainingSeconds % 60;
   const timeStr = `${mins}:${secs.toString().padStart(2, "0")}`;
+  const divider = "-".repeat(39);
+  const block = plan.blocks[cursor.blockIndex];
+  const blockName = block?.name || `Block ${cursor.blockIndex + 1}`;
+  const blockLine = `Block ${cursor.blockIndex + 1} out of ${plan.blocks.length} \u00B7 ${truncate(blockName, 32)}`;
 
-  const header = isBlockRest ? "BLOCK REST" : "REST";
-
-  // Preview next exercise with name + prescription
-  const next = peekNextExercise(cursor, plan);
-  const nextLine = next
-    ? `NEXT: ${formatNextPreview(next)}`
-    : "";
+  const restLabel = isBlockRest ? "BLOCK REST" : "REST";
+  const timerLine = `${restLabel} ${timeStr}`;
+  const nextInfo = getExerciseAtCursor(cursor, plan);
+  const nextLine = nextInfo
+    ? `Next: ${nextInfo.exercise.name} ${formatReps(nextInfo.exercise.prescribedReps)} \u00B7 Set ${cursor.roundNumber}/${nextInfo.block.rounds}`
+    : "Next: Workout Complete";
 
   const lines = [
-    header,
+    blockLine,
     "",
-    `       ${timeStr}`,
-    "",
+    divider,
+    timerLine,
+    divider,
     nextLine,
   ];
 

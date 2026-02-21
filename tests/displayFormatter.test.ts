@@ -121,59 +121,61 @@ describe("formatExerciseScreen", () => {
 });
 
 describe("formatRestScreen", () => {
-  it("returns a TextListScreen with countdown and skip action", () => {
+  it("returns a workout-style TextListScreen with countdown, footer, and skip action", () => {
     const plan = makePlan();
     const cursor: WorkoutCursor = { blockIndex: 0, exerciseIndex: 0, roundNumber: 1, phase: "rest" };
 
     const screen = formatRestScreen(45, cursor, plan, false);
 
     assert.equal(screen.kind, "textList");
-    assert.ok(screen.content.includes("REST"));
-    assert.ok(screen.content.includes("0:45"));
+    assert.ok(screen.content.includes("Block 1 out of 1 \u00B7 Chest Superset"));
+    assert.ok(screen.content.includes("---------------------------------------"));
+    assert.ok(screen.content.includes("REST 0:45"));
+    assert.ok(screen.content.includes("Next: Bench Press 10 reps \u00B7 Set 1/3"));
     assert.deepEqual(screen.actions, ["Skip Rest"]);
+    assert.equal(screen.footer, "Push Day A \u00B7 0% Completed");
   });
 });
 
 describe("formatRestTimerText", () => {
-  it("returns text with timer and NEXT exercise name", () => {
+  it("returns workout-style text with timer and next set line", () => {
     const plan = makePlan();
     const cursor: WorkoutCursor = { blockIndex: 0, exerciseIndex: 0, roundNumber: 1, phase: "rest" };
 
     const text = formatRestTimerText(30, cursor, plan, false);
 
-    assert.ok(text.includes("REST"));
-    assert.ok(text.includes("0:30"));
-    assert.ok(text.includes("NEXT: Incline Fly"));
+    assert.ok(text.includes("Block 1 out of 1 \u00B7 Chest Superset"));
+    assert.ok(text.includes("REST 0:30"));
+    assert.ok(text.includes("Next: Bench Press 10 reps \u00B7 Set 1/3"));
   });
 
-  it("shows exercise name prominently in NEXT line", () => {
+  it("shows exercise name prominently in Next line", () => {
     const plan = makePlan();
     const cursor: WorkoutCursor = { blockIndex: 0, exerciseIndex: 0, roundNumber: 1, phase: "rest" };
 
     const text = formatRestTimerText(60, cursor, plan, false);
 
-    // The exercise name must appear on the "NEXT:" line
-    assert.ok(text.includes("NEXT: Incline Fly"));
+    // The exercise name must appear on the "Next:" line
+    assert.ok(text.includes("Next: Bench Press"));
   });
 
-  it("shows BLOCK REST header for block rest", () => {
+  it("shows BLOCK REST timer line for block rest", () => {
     const plan = makePlan();
     const cursor: WorkoutCursor = { blockIndex: 0, exerciseIndex: 0, roundNumber: 1, phase: "blockRest" };
 
     const text = formatRestTimerText(90, cursor, plan, true);
-    assert.ok(text.includes("BLOCK REST"));
+    assert.ok(text.includes("BLOCK REST 1:30"));
   });
 
-  it("includes load and reps in NEXT line", () => {
+  it("includes reps and set progress in Next line", () => {
     const plan = makePlan();
     const cursor: WorkoutCursor = { blockIndex: 0, exerciseIndex: 0, roundNumber: 1, phase: "rest" };
 
     const text = formatRestTimerText(60, cursor, plan, false);
 
-    // "NEXT: Incline Fly 14kg 12" — exercise name + load + reps
-    assert.ok(text.includes("Incline Fly"));
-    assert.ok(text.includes("14kg"));
-    assert.ok(text.includes("12"));
+    assert.ok(text.includes("Bench Press"));
+    assert.ok(text.includes("10 reps"));
+    assert.ok(text.includes("Set 1/3"));
   });
 });
 
