@@ -50,6 +50,10 @@ export class StorageAdapterImpl implements StorageAdapter {
     this.saveJson(STORAGE_KEYS.logs, logs);
   }
 
+  clearLogs(): void {
+    this.removeKey(STORAGE_KEYS.logs);
+  }
+
   loadUnitPreference(): WeightUnit {
     try {
       const val = localStorage.getItem(STORAGE_KEYS.unitPreference);

@@ -200,6 +200,27 @@ export class PhoneUI {
         return;
       }
 
+      case "clear-history": {
+        const logs = this.storage.loadLogs();
+        if (logs.length === 0) {
+          await presentToast("History already empty");
+          return;
+        }
+
+        const confirmed = await presentConfirmAlert({
+          header: "Clear History",
+          message: "Delete all workout logs?",
+          confirmText: "Clear",
+          confirmRole: "confirm",
+        });
+        if (!confirmed) return;
+
+        this.storage.clearLogs();
+        await presentToast("History cleared");
+        this.render();
+        return;
+      }
+
       case "new-plan": {
         this.openEditor(null);
         return;

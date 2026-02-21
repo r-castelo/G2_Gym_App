@@ -168,3 +168,21 @@ export function flatSetIndex(cursor: WorkoutCursor, plan: TrainingPlan): number 
   }
   return index + 1;
 }
+
+/** Compute 1-based set progress within the current block (exercise x rounds). */
+export function blockSetProgress(
+  cursor: WorkoutCursor,
+  plan: TrainingPlan,
+): { current: number; total: number } {
+  const block = plan.blocks[cursor.blockIndex];
+  if (!block) {
+    return { current: 1, total: 1 };
+  }
+
+  const setsPerRound = Math.max(1, block.exercises.length);
+  const total = Math.max(1, setsPerRound * Math.max(1, block.rounds));
+  const rawCurrent = (Math.max(1, cursor.roundNumber) - 1) * setsPerRound + cursor.exerciseIndex + 1;
+  const current = Math.max(1, Math.min(total, rawCurrent));
+
+  return { current, total };
+}

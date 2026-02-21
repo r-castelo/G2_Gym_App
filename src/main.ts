@@ -41,6 +41,14 @@ async function bootstrap(): Promise<void> {
 
   await controller.start();
 
+  const syncVisibility = (): void => {
+    void controller.onHostVisibilityChange(document.visibilityState === "visible").catch((err: unknown) => {
+      console.error("Failed to sync visibility state:", err);
+    });
+  };
+  document.addEventListener("visibilitychange", syncVisibility);
+  window.addEventListener("pageshow", syncVisibility);
+
   setPhoneState("connected", "Connected to glasses");
   phoneUI.show();
 

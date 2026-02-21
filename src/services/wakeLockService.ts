@@ -16,6 +16,7 @@ export class WakeLockServiceImpl implements WakeLockService {
   private sentinel: WakeLockSentinel | null = null;
   private wantLock = false;
   private boundVisibilityHandler: (() => void) | null = null;
+  private boundPageShowHandler: (() => void) | null = null;
 
   async acquire(): Promise<void> {
     this.wantLock = true;
@@ -40,6 +41,9 @@ export class WakeLockServiceImpl implements WakeLockService {
       this.sentinel = await navigator.wakeLock.request("screen");
       this.sentinel.addEventListener("release", () => {
         this.sentinel = null;
+        if (this.wantLock && document.visibilityState === "visible") {
+          void this.requestLock();
+        }
       });
       console.log("[wakelock] Acquired");
     } catch (err) {
@@ -67,7 +71,13 @@ export class WakeLockServiceImpl implements WakeLockService {
         void this.requestLock();
       }
     };
+    this.boundPageShowHandler = () => {
+      if (this.wantLock) {
+        void this.requestLock();
+      }
+    };
 
     document.addEventListener("visibilitychange", this.boundVisibilityHandler);
+    window.addEventListener("pageshow", this.boundPageShowHandler);
   }
 }

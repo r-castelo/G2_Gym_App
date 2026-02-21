@@ -1,5 +1,5 @@
 import { formatLoad, formatReps } from "../../domain/displayFormatter";
-import { countTotalSets, flatSetIndex, getExerciseAtCursor, nextStep } from "../../domain/workoutEngine";
+import { blockSetProgress, countTotalSets, flatSetIndex, getExerciseAtCursor, nextStep } from "../../domain/workoutEngine";
 import type { WorkoutSession } from "../../types/contracts";
 import { esc } from "../utils";
 
@@ -25,9 +25,10 @@ export function renderActiveView(model: ActiveViewModel): string {
   const blockLabel = info
     ? `Block ${session.cursor.blockIndex + 1} out of ${session.plan.blocks.length} \u00B7 ${info.blockName || `Block ${session.cursor.blockIndex + 1}`}`
     : `Block ${session.cursor.blockIndex + 1} out of ${session.plan.blocks.length}`;
+  const currentSetInBlock = blockSetProgress(session.cursor, session.plan);
 
   const nowLine = info
-    ? `NOW: ${info.exercise.name.toUpperCase()} ${formatReps(info.exercise.prescribedReps).toUpperCase()} \u00B7 Set ${session.cursor.roundNumber}/${info.block.rounds}`
+    ? `NOW: ${info.exercise.name.toUpperCase()} ${formatReps(info.exercise.prescribedReps).toUpperCase()} \u00B7 Set ${currentSetInBlock.current}/${currentSetInBlock.total}`
     : "NOW: Workout state unavailable";
 
   const nextLine = renderNextLine(session);
@@ -70,5 +71,6 @@ function renderNextLine(session: WorkoutSession): string {
   const load = formatLoad(nextInfo.exercise.prescribedLoad);
   const reps = formatReps(nextInfo.exercise.prescribedReps);
   const details = [reps, load].filter(Boolean).join(" ");
-  return `Next: ${nextInfo.exercise.name}${details ? ` ${details}` : ""} \u00B7 Set ${result.cursor.roundNumber}/${nextInfo.block.rounds}`;
+  const nextSetInBlock = blockSetProgress(result.cursor, session.plan);
+  return `Next: ${nextInfo.exercise.name}${details ? ` ${details}` : ""} \u00B7 Set ${nextSetInBlock.current}/${nextSetInBlock.total}`;
 }

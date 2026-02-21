@@ -407,6 +407,29 @@ textarea:focus-visible {
   box-shadow: 3px 3px 0 #d3cbe9;
 }
 
+.editor-screen {
+  padding-bottom: 108px;
+}
+
+.editor-floating-actions {
+  position: fixed;
+  left: 50%;
+  bottom: calc(14px + env(safe-area-inset-bottom, 0px));
+  transform: translateX(-50%);
+  width: min(460px, 100%);
+  box-sizing: border-box;
+  padding: 0 14px;
+  display: flex;
+  justify-content: flex-end;
+  pointer-events: none;
+  z-index: 1200;
+}
+
+.editor-floating-actions .btn {
+  pointer-events: auto;
+  min-height: 44px;
+}
+
 .editor-screen h1,
 .editor-screen h2,
 .editor-screen h3 {
@@ -758,6 +781,10 @@ textarea {
 
   .app-dialog-overlay {
     align-items: center;
+  }
+
+  .editor-floating-actions {
+    padding: 0 16px;
   }
 }
 

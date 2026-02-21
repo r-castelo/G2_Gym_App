@@ -1,6 +1,7 @@
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
 import {
+  blockSetProgress,
   nextStep,
   countTotalSets,
   countTotalExercises,
@@ -171,6 +172,26 @@ describe("flatSetIndex", () => {
     const plan = makePlan();
     const cursor: WorkoutCursor = { blockIndex: 1, exerciseIndex: 1, roundNumber: 1, phase: "exercise" };
     assert.equal(flatSetIndex(cursor, plan), 5);
+  });
+});
+
+describe("blockSetProgress", () => {
+  it("tracks per-block set index across exercises and rounds", () => {
+    const plan = makePlan();
+    const cursor: WorkoutCursor = { blockIndex: 1, exerciseIndex: 0, roundNumber: 2, phase: "exercise" };
+    const progress = blockSetProgress(cursor, plan);
+    // Block B has 2 exercises x 2 rounds => 4 total sets in block
+    // Round 2, exercise 1 => set 3/4
+    assert.equal(progress.current, 3);
+    assert.equal(progress.total, 4);
+  });
+
+  it("matches rounds when block has a single exercise", () => {
+    const plan = makePlan();
+    const cursor: WorkoutCursor = { blockIndex: 0, exerciseIndex: 0, roundNumber: 2, phase: "exercise" };
+    const progress = blockSetProgress(cursor, plan);
+    assert.equal(progress.current, 2);
+    assert.equal(progress.total, 3);
   });
 });
 

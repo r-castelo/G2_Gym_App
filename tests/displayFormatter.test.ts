@@ -81,8 +81,8 @@ describe("formatExerciseScreen", () => {
     assert.equal(screen.kind, "textList");
     assert.ok(screen.content.includes("Block 1 out of 1 \u00B7 Chest Superset"));
     assert.ok(screen.content.includes("---------------------------------------"));
-    assert.ok(screen.content.includes("NOW: BENCH PRESS 10 REPS \u00B7 Set 2/3"));
-    assert.ok(screen.content.includes("Next: Incline Fly 12 reps \u00B7 Set 2/3"));
+    assert.ok(screen.content.includes("NOW: BENCH PRESS 10 REPS \u00B7 80KG \u00B7 Set 3/6"));
+    assert.ok(screen.content.includes("Next: Incline Fly 12 reps \u00B7 14kg \u00B7 Set 4/6"));
     assert.deepEqual(screen.actions, ["Done", "Skip"]);
     assert.equal(screen.footer, "Push Day A \u00B7 33% Completed");
   });
@@ -108,7 +108,7 @@ describe("formatExerciseScreen", () => {
     assert.equal(screen.footer, "Push Day A \u00B7 0% Completed");
   });
 
-  it("shows reps-only NOW line even for bodyweight exercises", () => {
+  it("shows load token in NOW line when exercise uses bodyweight", () => {
     const plan = makePlan();
     plan.blocks[0]!.exercises[0]!.prescribedLoad = { type: "bodyweight" };
     const cursor: WorkoutCursor = { blockIndex: 0, exerciseIndex: 0, roundNumber: 1, phase: "exercise" };
@@ -116,7 +116,7 @@ describe("formatExerciseScreen", () => {
     const exercise = block.exercises[0]!;
 
     const screen = formatExerciseScreen(cursor, plan, block, exercise, 0, 6);
-    assert.ok(screen.content.includes("NOW: BENCH PRESS 10 REPS \u00B7 Set 1/3"));
+    assert.ok(screen.content.includes("NOW: BENCH PRESS 10 REPS \u00B7 BW \u00B7 Set 1/6"));
   });
 });
 
@@ -131,7 +131,7 @@ describe("formatRestScreen", () => {
     assert.ok(screen.content.includes("Block 1 out of 1 \u00B7 Chest Superset"));
     assert.ok(screen.content.includes("---------------------------------------"));
     assert.ok(screen.content.includes("REST 0:45"));
-    assert.ok(screen.content.includes("Next: Bench Press 10 reps \u00B7 Set 1/3"));
+    assert.ok(screen.content.includes("Next: Bench Press 10 reps \u00B7 80kg \u00B7 Set 1/6"));
     assert.deepEqual(screen.actions, ["Skip Rest"]);
     assert.equal(screen.footer, "Push Day A \u00B7 0% Completed");
   });
@@ -146,7 +146,7 @@ describe("formatRestTimerText", () => {
 
     assert.ok(text.includes("Block 1 out of 1 \u00B7 Chest Superset"));
     assert.ok(text.includes("REST 0:30"));
-    assert.ok(text.includes("Next: Bench Press 10 reps \u00B7 Set 1/3"));
+    assert.ok(text.includes("Next: Bench Press 10 reps \u00B7 80kg \u00B7 Set 1/6"));
   });
 
   it("shows exercise name prominently in Next line", () => {
@@ -175,7 +175,8 @@ describe("formatRestTimerText", () => {
 
     assert.ok(text.includes("Bench Press"));
     assert.ok(text.includes("10 reps"));
-    assert.ok(text.includes("Set 1/3"));
+    assert.ok(text.includes("80kg"));
+    assert.ok(text.includes("Set 1/6"));
   });
 });
 

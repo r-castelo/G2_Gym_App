@@ -356,6 +356,9 @@ export class GlassAdapterImpl implements GlassAdapter {
     if (eventType === OsEventTypeList.FOREGROUND_EXIT_EVENT) {
       return { kind: "FOREGROUND_EXIT" };
     }
+    if (eventType === OsEventTypeList.ABNORMAL_EXIT_EVENT) {
+      return { kind: "FOREGROUND_EXIT" };
+    }
 
     return null;
   }

@@ -11,6 +11,7 @@ import type {
 } from "../types/contracts";
 import { ACTION_LABELS } from "../config/constants";
 import {
+  blockSetProgress,
   countTotalSets,
   flatSetIndex,
   getExerciseAtCursor,
@@ -65,15 +66,20 @@ export function formatExerciseScreen(
 ): TextListScreen {
   const blockLine = `Block ${cursor.blockIndex + 1} out of ${plan.blocks.length} \u00B7 ${truncate(block.name, 32)}`;
   const divider = "-".repeat(39);
-  const nowLine = `NOW: ${exercise.name.toUpperCase()} ${formatReps(exercise.prescribedReps).toUpperCase()} \u00B7 Set ${cursor.roundNumber}/${block.rounds}`;
+  const currentSet = blockSetProgress(cursor, plan);
+  const nowLoad = formatLoad(exercise.prescribedLoad);
+  const nowLoadPart = nowLoad ? ` \u00B7 ${nowLoad.toUpperCase()}` : "";
+  const nowLine = `NOW: ${exercise.name.toUpperCase()} ${formatReps(exercise.prescribedReps).toUpperCase()}${nowLoadPart} \u00B7 Set ${currentSet.current}/${currentSet.total}`;
 
   const nextResult = nextStep(cursor, plan);
   let nextLine = "Next: Workout Complete";
   if (!nextResult.done) {
     const nextInfo = getExerciseAtCursor(nextResult.cursor, plan);
-    const nextBlockRounds = plan.blocks[nextResult.cursor.blockIndex]?.rounds ?? block.rounds;
+    const nextSet = blockSetProgress(nextResult.cursor, plan);
     if (nextInfo) {
-      nextLine = `Next: ${nextInfo.exercise.name} ${formatReps(nextInfo.exercise.prescribedReps)} \u00B7 Set ${nextResult.cursor.roundNumber}/${nextBlockRounds}`;
+      const nextLoad = formatLoad(nextInfo.exercise.prescribedLoad);
+      const nextLoadPart = nextLoad ? ` \u00B7 ${nextLoad}` : "";
+      nextLine = `Next: ${nextInfo.exercise.name} ${formatReps(nextInfo.exercise.prescribedReps)}${nextLoadPart} \u00B7 Set ${nextSet.current}/${nextSet.total}`;
     }
   }
 
@@ -142,9 +148,13 @@ export function formatRestTimerText(
   const restLabel = isBlockRest ? "BLOCK REST" : "REST";
   const timerLine = `${restLabel} ${timeStr}`;
   const nextInfo = getExerciseAtCursor(cursor, plan);
-  const nextLine = nextInfo
-    ? `Next: ${nextInfo.exercise.name} ${formatReps(nextInfo.exercise.prescribedReps)} \u00B7 Set ${cursor.roundNumber}/${nextInfo.block.rounds}`
-    : "Next: Workout Complete";
+  const nextSet = blockSetProgress(cursor, plan);
+  let nextLine = "Next: Workout Complete";
+  if (nextInfo) {
+    const nextLoad = formatLoad(nextInfo.exercise.prescribedLoad);
+    const nextLoadPart = nextLoad ? ` \u00B7 ${nextLoad}` : "";
+    nextLine = `Next: ${nextInfo.exercise.name} ${formatReps(nextInfo.exercise.prescribedReps)}${nextLoadPart} \u00B7 Set ${nextSet.current}/${nextSet.total}`;
+  }
 
   const lines = [
     blockLine,

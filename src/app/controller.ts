@@ -104,6 +104,21 @@ export class Controller {
     await this.wakeLock?.release();
   }
 
+  async onHostVisibilityChange(visible: boolean): Promise<void> {
+    if (!this.started) return;
+
+    if (visible) {
+      if (this.state.session) {
+        await this.wakeLock?.acquire();
+      }
+      await this.renderCurrentMode();
+      return;
+    }
+
+    this.persistSession();
+    await this.wakeLock?.release();
+  }
+
   // --- Public API for PhoneUI ---
 
   async startWorkout(planId: string): Promise<void> {

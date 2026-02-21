@@ -61,8 +61,11 @@ export function renderEditorView(model: EditorViewModel): string {
 
     <section class="panel action-bar">
       <button type="button" class="btn btn-ghost" data-action="export-markdown">Export</button>
-      <button type="button" class="btn btn-primary" data-action="save-plan">Save Plan</button>
     </section>
+
+    <div class="editor-floating-actions">
+      <button type="button" class="btn btn-primary" data-action="save-plan">Save Plan</button>
+    </div>
   </main>`;
 }
 

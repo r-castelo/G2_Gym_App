@@ -7,6 +7,9 @@ export interface HistoryViewModel {
 
 export function renderHistoryView(model: HistoryViewModel): string {
   const { logs } = model;
+  const clearButton = logs.length > 0
+    ? `<button type="button" class="btn btn-danger btn-small" data-action="clear-history">Clear History</button>`
+    : "";
 
   return `<main class="phone-screen history-screen">
     <header class="screen-header">
@@ -17,6 +20,7 @@ export function renderHistoryView(model: HistoryViewModel): string {
           <h1>Workout Logs</h1>
         </div>
       </div>
+      ${clearButton ? `<div class="header-actions">${clearButton}</div>` : ""}
     </header>
 
     ${logs.length === 0

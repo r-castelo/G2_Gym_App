@@ -173,6 +173,7 @@ export interface StorageAdapter {
 
   loadLogs(): WorkoutLog[];
   saveLog(log: WorkoutLog): void;
+  clearLogs(): void;
 
   loadUnitPreference(): WeightUnit;
   saveUnitPreference(unit: WeightUnit): void;
