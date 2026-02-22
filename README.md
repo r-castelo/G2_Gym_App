@@ -79,6 +79,16 @@ npm run pack
 
 This produces an `.ehpk` package (ignored by git).
 
+## GitHub Pages
+
+The project is configured to auto-deploy to GitHub Pages from `main` via GitHub Actions.
+
+- Workflow: `.github/workflows/deploy-pages.yml`
+- Expected URL: `https://r-castelo.github.io/G2_Gym_App/`
+
+If this is the first deploy, in GitHub repo settings set:
+- `Settings -> Pages -> Build and deployment -> Source: GitHub Actions`
+
 ## Workout Markdown Format
 
 Import/export uses this format:
@@ -89,13 +99,14 @@ Import/export uses this format:
 ## Chest [straight] x3
 - rest: 60s
 - block-rest: 90s
-- exercise-rest: 0s
 
 ### Bench Press
 - reps: 10
 - load: 80kg
 - notes: Pause at bottom
 ```
+
+`exercise-rest` is still accepted on import as a legacy alias of `rest`.
 
 Supported reps:
 - Fixed: `10`
