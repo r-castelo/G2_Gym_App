@@ -12,6 +12,7 @@ import type {
 import { ACTION_LABELS } from "../config/constants";
 import {
   blockSetProgress,
+  countTotalExercises,
   countTotalSets,
   flatSetIndex,
   getExerciseAtCursor,
@@ -175,7 +176,8 @@ export function formatRestTimerText(
  * │  WORKOUT COMPLETE ✓                     │
  * │                                         │
  * │  Push Day                               │
- * │  6/6 sets · 47min                       │
+ * │  5 exercises · 20 sets                  │
+ * │  Duration: 47min                        │
  * │                                         │
  * │  [ Done ]                               │
  * └─────────────────────────────────────────┘
@@ -183,17 +185,21 @@ export function formatRestTimerText(
 export function formatCompleteScreen(
   plan: TrainingPlan,
   durationSeconds: number,
-  setsCompleted: number,
+  _setsCompleted: number,
   totalSets: number,
 ): TextListScreen {
   const mins = Math.floor(durationSeconds / 60);
   const duration = `${mins}min`;
+  const totalExercises = countTotalExercises(plan);
+  const exerciseLabel = totalExercises === 1 ? "exercise" : "exercises";
+  const setLabel = totalSets === 1 ? "set" : "sets";
 
   const lines = [
     "WORKOUT COMPLETE \u2713",
     "",
     truncate(plan.name, MAX_NAME_LEN),
-    `${setsCompleted}/${totalSets} sets \u00B7 ${duration}`,
+    `${totalExercises} ${exerciseLabel} \u00B7 ${totalSets} ${setLabel}`,
+    `Duration: ${duration}`,
   ];
 
   return {

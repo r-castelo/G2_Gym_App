@@ -188,8 +188,9 @@ describe("formatCompleteScreen", () => {
     assert.equal(screen.kind, "textList");
     assert.ok(screen.content.includes("WORKOUT COMPLETE"));
     assert.ok(screen.content.includes("Push Day A"));
+    assert.ok(screen.content.includes("2 exercises \u00B7 6 sets"));
+    assert.ok(screen.content.includes("Duration: 47min"));
     assert.ok(screen.content.includes("47min"));
-    assert.ok(screen.content.includes("6/6 sets"));
     assert.deepEqual(screen.actions, ["Done"]);
   });
 });
