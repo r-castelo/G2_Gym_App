@@ -163,6 +163,19 @@ export class PhoneUI {
     }
   }
 
+  private getScreenScrollTop(): number {
+    const screen = this.appEl.querySelector(".phone-screen");
+    if (!(screen instanceof HTMLElement)) return 0;
+    return screen.scrollTop;
+  }
+
+  private renderPreservingScroll(scrollTop: number): void {
+    this.render();
+    const screen = this.appEl.querySelector(".phone-screen");
+    if (!(screen instanceof HTMLElement)) return;
+    screen.scrollTop = scrollTop;
+  }
+
   private readonly handleClick = (event: Event): void => {
     const actionEl = findActionElement(event);
     if (!actionEl) return;
@@ -268,23 +281,26 @@ export class PhoneUI {
 
       case "add-block": {
         if (!this.editingPlan) return;
+        const scrollTop = this.getScreenScrollTop();
         this.editingPlan.blocks.push(this.makeEmptyBlock());
         this.uiState.editorError = "";
-        this.render();
+        this.renderPreservingScroll(scrollTop);
         return;
       }
 
       case "remove-block": {
         if (!this.editingPlan) return;
+        const scrollTop = this.getScreenScrollTop();
         const bi = getDatasetInt(actionEl.dataset["bi"]);
         this.editingPlan.blocks.splice(bi, 1);
         this.uiState.editorError = "";
-        this.render();
+        this.renderPreservingScroll(scrollTop);
         return;
       }
 
       case "add-set": {
         if (!this.editingPlan) return;
+        const scrollTop = this.getScreenScrollTop();
         const bi = getDatasetInt(actionEl.dataset["bi"]);
         const block = this.editingPlan.blocks[bi];
         if (!block) return;
@@ -297,19 +313,20 @@ export class PhoneUI {
         });
 
         this.uiState.editorError = "";
-        this.render();
+        this.renderPreservingScroll(scrollTop);
         return;
       }
 
       case "remove-set": {
         if (!this.editingPlan) return;
+        const scrollTop = this.getScreenScrollTop();
         const bi = getDatasetInt(actionEl.dataset["bi"]);
         const ei = getDatasetInt(actionEl.dataset["ei"]);
         const block = this.editingPlan.blocks[bi];
         if (!block) return;
         block.exercises.splice(ei, 1);
         this.uiState.editorError = "";
-        this.render();
+        this.renderPreservingScroll(scrollTop);
         return;
       }
 

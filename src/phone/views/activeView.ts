@@ -1,6 +1,14 @@
 import { formatLoad, formatReps } from "../../domain/displayFormatter";
 import { blockSetProgress, countTotalSets, flatSetIndex, getExerciseAtCursor, nextStep } from "../../domain/workoutEngine";
 import type { WorkoutSession } from "../../types/contracts";
+import {
+  badgeClass,
+  buttonClass,
+  cardClass,
+  cardContentClass,
+  cardHeaderClass,
+  textClass,
+} from "../designSystem";
 import { esc } from "../utils";
 
 export interface ActiveViewModel {
@@ -21,6 +29,11 @@ export function renderActiveView(model: ActiveViewModel): string {
   let statusText = "In Progress";
   if (session.paused) statusText = "Paused";
   if (session.cursor.phase === "rest" || session.cursor.phase === "blockRest") statusText = "Resting";
+  const statusClass = session.paused
+    ? "status-badge-paused"
+    : session.cursor.phase === "rest" || session.cursor.phase === "blockRest"
+      ? "status-badge-resting"
+      : "status-badge-connected";
 
   const blockLabel = info
     ? `Block ${session.cursor.blockIndex + 1} out of ${session.plan.blocks.length} \u00B7 ${info.blockName || `Block ${session.cursor.blockIndex + 1}`}`
@@ -36,27 +49,35 @@ export function renderActiveView(model: ActiveViewModel): string {
   return `<main class="phone-screen">
     <header class="screen-header">
       <div>
-        <p class="screen-kicker">Fitness HUD</p>
-        <h1>${esc(session.planName)}</h1>
+        <p class="${textClass("detail", "screen-kicker")}">Fitness HUD</p>
+        <h1 class="${textClass("title-lg")}">${esc(session.planName)}</h1>
       </div>
-      <div class="status-pill status-connected">${esc(statusText)}</div>
+      <div class="${badgeClass(`status-badge ${statusClass}`)}">${esc(statusText)}</div>
     </header>
 
-    <section class="panel active-panel">
-      <p class="active-block-title">${esc(blockLabel)}</p>
+    <section class="${cardClass("active-panel")}">
+      <div class="${cardContentClass()}">
+      <p class="${textClass("detail", "active-block-title muted")}">${esc(blockLabel)}</p>
       <div class="active-divider" aria-hidden="true"></div>
-      <p class="active-now-line">${esc(nowLine)}</p>
+      <p class="${textClass("title-1", "active-now-line")}">${esc(nowLine)}</p>
       <div class="active-divider" aria-hidden="true"></div>
-      <p class="active-next-line">${esc(nextLine)}</p>
+      <p class="${textClass("body-2", "active-next-line muted")}">${esc(nextLine)}</p>
+      </div>
     </section>
 
-    <section class="panel progress-panel">
-      <h2>${esc(session.planName)} \u00B7 ${progressPct}% Completed</h2>
-      <p class="muted">Set ${Math.min(currentSet, totalSets)}/${totalSets} \u00B7 ${mins}:${secs.toString().padStart(2, "0")}</p>
+    <section class="${cardClass("progress-panel")}">
+      <div class="${cardHeaderClass()}">
+        <h2 class="${textClass("title-2")}">${esc(session.planName)} \u00B7 ${progressPct}% Completed</h2>
+      </div>
+      <div class="${cardContentClass()}">
+        <p class="${textClass("body-2", "muted")}">Set ${Math.min(currentSet, totalSets)}/${totalSets} \u00B7 ${mins}:${secs.toString().padStart(2, "0")}</p>
+      </div>
     </section>
 
-    <section class="panel action-bar">
-      <button type="button" class="btn btn-danger btn-block" data-action="abandon-workout">Abandon Workout</button>
+    <section class="${cardClass("action-bar")}">
+      <div class="${cardContentClass()}">
+        <button type="button" class="${buttonClass("negative", "md", "btn-block")}" data-action="abandon-workout">Abandon Workout</button>
+      </div>
     </section>
   </main>`;
 }

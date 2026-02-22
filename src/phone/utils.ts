@@ -1,4 +1,5 @@
 import type { LoadSpec, RepSpec } from "../types/contracts";
+import { buttonClass, cardClass, textClass } from "./designSystem";
 
 let idCounter = 0;
 export function genId(): string {
@@ -109,12 +110,12 @@ export async function presentConfirmAlert(options: {
   return new Promise<boolean>((resolve) => {
     const overlay = document.createElement("div");
     overlay.className = "app-dialog-overlay";
-    overlay.innerHTML = `<section class="app-dialog" role="alertdialog" aria-modal="true" aria-labelledby="app-dialog-title">
-      <h3 id="app-dialog-title">${esc(options.header)}</h3>
-      <p>${esc(options.message)}</p>
+    overlay.innerHTML = `<section class="${cardClass("app-dialog")}" role="alertdialog" aria-modal="true" aria-labelledby="app-dialog-title">
+      <h3 id="app-dialog-title" class="${textClass("title-2")}">${esc(options.header)}</h3>
+      <p class="${textClass("body-2", "muted")}">${esc(options.message)}</p>
       <div class="app-dialog-actions">
-        <button type="button" class="btn btn-ghost" data-role="cancel">${esc(options.cancelText ?? "Cancel")}</button>
-        <button type="button" class="btn btn-danger" data-role="${esc(confirmRole)}">${esc(options.confirmText ?? "Confirm")}</button>
+        <button type="button" class="${buttonClass("default", "sm")}" data-role="cancel">${esc(options.cancelText ?? "Cancel")}</button>
+        <button type="button" class="${buttonClass("negative", "sm")}" data-role="${esc(confirmRole)}">${esc(options.confirmText ?? "Confirm")}</button>
       </div>
     </section>`;
 

@@ -1,3 +1,4 @@
+import "@jappyjan/even-realities-ui/styles.css";
 import "./phone/phone.css";
 
 import { Controller } from "./app/controller";
