@@ -97,8 +97,15 @@ function renderBlock(bi: number, block: TrainingPlan["blocks"][number]): string 
         <input type="number" inputmode="numeric" min="1" data-model="block-rounds" data-bi="${bi}" value="${block.rounds}" />
       </label>
       <label class="field">
-        <span>Rest Between Rounds (s)</span>
-        <input type="number" inputmode="numeric" min="0" data-model="block-rest" data-bi="${bi}" value="${block.restBetweenRounds}" />
+        <span>Rest Between Sets/Rounds (s)</span>
+        <input
+          type="number"
+          inputmode="numeric"
+          min="0"
+          data-model="block-rest"
+          data-bi="${bi}"
+          value="${block.restBetweenRounds > 0 ? block.restBetweenRounds : block.restBetweenExercises}"
+        />
       </label>
       <label class="field">
         <span>Rest After Block (s)</span>

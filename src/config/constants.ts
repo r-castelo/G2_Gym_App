@@ -62,7 +62,7 @@ export const STORAGE_KEYS = {
 } as const;
 
 export const DEFAULTS = {
-  restBetweenExercises: 0,
+  restBetweenExercises: 60,
   restBetweenRounds: 60,
   restAfterBlock: 90,
   rounds: 1,

@@ -9,14 +9,19 @@ export type StepResult =
  * completes the current exercise set.
  *
  * Advancement order within a block (e.g., superset [A, B, C] x3):
- *   Round 1: A → rest(betweenExercises) → B → rest(betweenExercises) → C → rest(betweenRounds)
- *   Round 2: A → ... → C → rest(betweenRounds)
+ *   Round 1: A → rest(betweenSets) → B → rest(betweenSets) → C → rest(betweenSets)
+ *   Round 2: A → ... → C → rest(betweenSets)
  *   Round 3: A → ... → C → rest(afterBlock)
  *   → next block
  */
 export function nextStep(cursor: WorkoutCursor, plan: TrainingPlan): StepResult {
   const block = plan.blocks[cursor.blockIndex];
   if (!block) return { done: true };
+
+  // Rest between sets and rounds is unified. Keep legacy fallback support
+  // for older plans that only persisted restBetweenExercises.
+  const restBetweenSets =
+    block.restBetweenRounds > 0 ? block.restBetweenRounds : block.restBetweenExercises;
 
   const isLastExerciseInRound = cursor.exerciseIndex >= block.exercises.length - 1;
   const isLastRound = cursor.roundNumber >= block.rounds;
@@ -30,9 +35,9 @@ export function nextStep(cursor: WorkoutCursor, plan: TrainingPlan): StepResult 
         blockIndex: cursor.blockIndex,
         exerciseIndex: cursor.exerciseIndex + 1,
         roundNumber: cursor.roundNumber,
-        phase: block.restBetweenExercises > 0 ? "rest" : "exercise",
+        phase: restBetweenSets > 0 ? "rest" : "exercise",
       },
-      restSeconds: block.restBetweenExercises,
+      restSeconds: restBetweenSets,
     };
   }
 
@@ -44,9 +49,9 @@ export function nextStep(cursor: WorkoutCursor, plan: TrainingPlan): StepResult 
         blockIndex: cursor.blockIndex,
         exerciseIndex: 0,
         roundNumber: cursor.roundNumber + 1,
-        phase: block.restBetweenRounds > 0 ? "rest" : "exercise",
+        phase: restBetweenSets > 0 ? "rest" : "exercise",
       },
-      restSeconds: block.restBetweenRounds,
+      restSeconds: restBetweenSets,
     };
   }
 

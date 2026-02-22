@@ -22,7 +22,7 @@ function genId(): string {
  *   ## Block Name [type] xN
  *   - rest: 60s
  *   - block-rest: 90s
- *   - exercise-rest: 10s
+ *   - exercise-rest: 10s (legacy alias for rest)
  *   ### Exercise Name
  *   - reps: 10 | 8-12 | AMRAP | 30s
  *   - load: 80kg | 35lb | BW | RPE 8 | 75%
@@ -157,9 +157,7 @@ function parseBlockHeading(text: string): Partial<Block> {
     blockType,
     rounds: Math.max(1, rounds),
     exercises: [],
-    restBetweenExercises: blockType === "straight"
-      ? DEFAULTS.restBetweenRounds
-      : DEFAULTS.restBetweenExercises,
+    restBetweenExercises: DEFAULTS.restBetweenRounds,
     restBetweenRounds: DEFAULTS.restBetweenRounds,
     restAfterBlock: DEFAULTS.restAfterBlock,
   };
@@ -170,12 +168,14 @@ function applyBlockAttribute(block: Partial<Block>, key: string, value: string):
 
   switch (key) {
     case "rest":
+      block.restBetweenExercises = seconds;
       block.restBetweenRounds = seconds;
       break;
     case "block-rest":
       block.restAfterBlock = seconds;
       break;
     case "exercise-rest":
+      block.restBetweenRounds = seconds;
       block.restBetweenExercises = seconds;
       break;
   }

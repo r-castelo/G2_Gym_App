@@ -441,7 +441,9 @@ export class PhoneUI {
         const bi = getDatasetInt(target.dataset["bi"]);
         const block = this.editingPlan.blocks[bi];
         if (!block) return;
-        block.restBetweenRounds = Math.max(0, parseInt(value, 10) || 0);
+        const rest = Math.max(0, parseInt(value, 10) || 0);
+        block.restBetweenRounds = rest;
+        block.restBetweenExercises = rest;
         return;
       }
 
@@ -549,7 +551,7 @@ export class PhoneUI {
       blockType: "straight" as BlockType,
       exercises: [],
       rounds: DEFAULTS.rounds,
-      restBetweenExercises: DEFAULTS.restBetweenExercises,
+      restBetweenExercises: DEFAULTS.restBetweenRounds,
       restBetweenRounds: DEFAULTS.restBetweenRounds,
       restAfterBlock: DEFAULTS.restAfterBlock,
     };

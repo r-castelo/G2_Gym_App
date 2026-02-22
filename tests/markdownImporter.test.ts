@@ -108,7 +108,7 @@ describe("parseWorkoutMarkdown", () => {
     assert.deepEqual(plan.blocks[0]!.exercises[0]!.prescribedLoad, { type: "percentage", value: 85 });
   });
 
-  it("handles exercise-rest attribute", () => {
+  it("treats exercise-rest as an alias for rest", () => {
     const md = `# Test
 
 ## Circuit [circuit] x3
@@ -123,7 +123,7 @@ describe("parseWorkoutMarkdown", () => {
 `;
     const plan = parseWorkoutMarkdown(md);
     assert.equal(plan.blocks[0]!.restBetweenExercises, 10);
-    assert.equal(plan.blocks[0]!.restBetweenRounds, 30);
+    assert.equal(plan.blocks[0]!.restBetweenRounds, 10);
   });
 
   it("throws on missing plan name", () => {

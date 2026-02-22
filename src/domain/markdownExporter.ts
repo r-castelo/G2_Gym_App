@@ -15,9 +15,6 @@ export function exportToMarkdown(plan: TrainingPlan): string {
     if (block.restAfterBlock > 0) {
       lines.push(`- block-rest: ${block.restAfterBlock}s`);
     }
-    if (block.restBetweenExercises > 0) {
-      lines.push(`- exercise-rest: ${block.restBetweenExercises}s`);
-    }
     lines.push("");
 
     for (const exercise of block.exercises) {

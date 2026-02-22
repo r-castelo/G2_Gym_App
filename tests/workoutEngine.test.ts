@@ -88,7 +88,8 @@ describe("nextStep", () => {
       assert.equal(result.cursor.blockIndex, 1);
       assert.equal(result.cursor.exerciseIndex, 1);
       assert.equal(result.cursor.roundNumber, 1);
-      assert.equal(result.restSeconds, 0); // restBetweenExercises is 0
+      assert.equal(result.cursor.phase, "rest");
+      assert.equal(result.restSeconds, 45); // unified rest uses block rest
     }
   });
 
@@ -113,8 +114,9 @@ describe("nextStep", () => {
     assert.equal(result.done, true);
   });
 
-  it("handles superset with exercise rest > 0", () => {
+  it("uses legacy exercise rest as fallback when round rest is zero", () => {
     const plan = makePlan();
+    plan.blocks[1]!.restBetweenRounds = 0;
     plan.blocks[1]!.restBetweenExercises = 15;
     const cursor: WorkoutCursor = { blockIndex: 1, exerciseIndex: 0, roundNumber: 1, phase: "exercise" };
     const result = nextStep(cursor, plan);
