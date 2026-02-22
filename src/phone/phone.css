@@ -788,6 +788,16 @@ textarea {
   }
 }
 
+.credits-footer {
+  margin-top: 8px;
+  padding: 10px 0 4px;
+  text-align: center;
+  font-size: 0.78rem;
+  color: var(--retro-muted);
+  opacity: 0.55;
+  letter-spacing: 0.02em;
+}
+
 @media (max-width: 360px) {
   .plan-actions {
     grid-template-columns: 1fr;

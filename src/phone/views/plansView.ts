@@ -49,6 +49,8 @@ export function renderPlansView(model: PlansViewModel): string {
         </select>
       </label>
     </section>
+
+    <footer class="credits-footer">Created by Renato Castelo Branco</footer>
   </main>`;
 }
 
