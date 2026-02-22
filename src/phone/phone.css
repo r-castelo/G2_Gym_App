@@ -342,6 +342,7 @@ textarea {
 
 .floating-save {
   width: 100%;
+  margin-bottom: var(--space-8);
 }
 
 .export-textarea {
