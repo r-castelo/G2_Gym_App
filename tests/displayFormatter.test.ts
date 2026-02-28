@@ -79,12 +79,14 @@ describe("formatExerciseScreen", () => {
     const screen = formatExerciseScreen(cursor, plan, block, exercise, 2, 6);
 
     assert.equal(screen.kind, "textList");
-    assert.ok(screen.content.includes("Block 1 out of 1 \u00B7 Chest Superset"));
-    assert.ok(screen.content.includes("---------------------------------------"));
-    assert.ok(screen.content.includes("NOW: BENCH PRESS 10 REPS \u00B7 80KG \u00B7 Set 3/6"));
-    assert.ok(screen.content.includes("Next: Incline Fly 12 reps \u00B7 14kg \u00B7 Set 4/6"));
+    assert.ok(screen.content.includes("BLOCK 1/1 ■ · CHEST SUPERSET"));
+    assert.ok(screen.content.includes("━━━━━━━━━━━━━━━━━━━━━━━━━━"));
+    assert.ok(screen.content.includes("▶ NOW:\n  ┃ BENCH PRESS\n  ┃ 10 REPS · 80KG"));
+    assert.ok(screen.content.includes("▷ NEXT:\n  ┃ INCLINE FLY\n  ┃ 12 REPS · 14KG"));
+    assert.equal(screen.theme, "exercise");
     assert.deepEqual(screen.actions, ["Done", "Skip"]);
-    assert.equal(screen.footer, "Push Day A \u00B7 33% Completed");
+    // 2 sets complete = 4 steps out of 12. 4/12 * 16 = 5.
+    assert.equal(screen.footer, "Push Day A █████▒▒▒▒▒▒▒▒▒▒▒");
   });
 
   it("shows completion next line when there is no next set", () => {
@@ -95,7 +97,7 @@ describe("formatExerciseScreen", () => {
     const exercise = block.exercises[1]!;
 
     const screen = formatExerciseScreen(cursor, plan, block, exercise, 5, 6);
-    assert.ok(screen.content.includes("Next: Workout Complete"));
+    assert.ok(screen.content.includes("▷ NEXT: Workout Complete"));
   });
 
   it("shows 0% progress when no sets completed", () => {
@@ -105,7 +107,7 @@ describe("formatExerciseScreen", () => {
     const exercise = block.exercises[0]!;
 
     const screen = formatExerciseScreen(cursor, plan, block, exercise, 0, 6);
-    assert.equal(screen.footer, "Push Day A \u00B7 0% Completed");
+    assert.equal(screen.footer, "Push Day A \u2592\u2592\u2592\u2592\u2592\u2592\u2592\u2592\u2592\u2592\u2592\u2592\u2592\u2592\u2592\u2592");
   });
 
   it("shows load token in NOW line when exercise uses bodyweight", () => {
@@ -116,24 +118,28 @@ describe("formatExerciseScreen", () => {
     const exercise = block.exercises[0]!;
 
     const screen = formatExerciseScreen(cursor, plan, block, exercise, 0, 6);
-    assert.ok(screen.content.includes("NOW: BENCH PRESS 10 REPS \u00B7 BW \u00B7 Set 1/6"));
+    assert.ok(screen.content.includes("\u25b6 NOW:\n  \u2503 BENCH PRESS\n  \u2503 10 REPS \u00b7 BW"));
   });
 });
 
 describe("formatRestScreen", () => {
   it("returns a workout-style TextListScreen with countdown, footer, and skip action", () => {
     const plan = makePlan();
-    const cursor: WorkoutCursor = { blockIndex: 0, exerciseIndex: 0, roundNumber: 1, phase: "rest" };
+    // Simulate rest after first set
+    const cursor: WorkoutCursor = { blockIndex: 0, exerciseIndex: 1, roundNumber: 1, phase: "rest" };
 
-    const screen = formatRestScreen(45, cursor, plan, false);
+    const screen = formatRestScreen(45, 60, cursor, plan, false);
 
     assert.equal(screen.kind, "textList");
-    assert.ok(screen.content.includes("Block 1 out of 1 \u00B7 Chest Superset"));
-    assert.ok(screen.content.includes("---------------------------------------"));
-    assert.ok(screen.content.includes("REST 0:45"));
-    assert.ok(screen.content.includes("Next: Bench Press 10 reps \u00B7 80kg \u00B7 Set 1/6"));
+    assert.ok(screen.content.includes("BLOCK 1/1 ■ · CHEST SUPERSET"));
+    assert.ok(screen.content.includes("━━━━━━━━━━━━━━━━━━━━━━━━━━"));
+    // 15 seconds elapsed of 60. 15/60 * 10 = 2.5 => 3.
+    assert.ok(screen.content.includes("▶ REST ── ███▒▒▒▒▒▒▒ 0:45"));
+    assert.ok(screen.content.includes("▷ NEXT:\n  ┃ INCLINE FLY\n  ┃ 12 REPS · 14KG"));
     assert.deepEqual(screen.actions, ["Skip Rest"]);
-    assert.equal(screen.footer, "Push Day A \u00B7 0% Completed");
+    // 1 set complete + in rest = 1 step out of 12. 1/12 * 16 = 1.
+    assert.equal(screen.footer, "Push Day A █▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒");
+    assert.equal(screen.theme, "rest");
   });
 });
 
@@ -142,41 +148,39 @@ describe("formatRestTimerText", () => {
     const plan = makePlan();
     const cursor: WorkoutCursor = { blockIndex: 0, exerciseIndex: 0, roundNumber: 1, phase: "rest" };
 
-    const text = formatRestTimerText(30, cursor, plan, false);
+    const text = formatRestTimerText(30, 60, cursor, plan, false);
 
-    assert.ok(text.includes("Block 1 out of 1 \u00B7 Chest Superset"));
-    assert.ok(text.includes("REST 0:30"));
-    assert.ok(text.includes("Next: Bench Press 10 reps \u00B7 80kg \u00B7 Set 1/6"));
+    assert.ok(text.includes("BLOCK 1/1 ■ · CHEST SUPERSET"));
+    // 30 / 60 elapsed -> 5/10 filled
+    assert.ok(text.includes("▶ REST ── █████▒▒▒▒▒ 0:30"));
   });
 
   it("shows exercise name prominently in Next line", () => {
     const plan = makePlan();
     const cursor: WorkoutCursor = { blockIndex: 0, exerciseIndex: 0, roundNumber: 1, phase: "rest" };
 
-    const text = formatRestTimerText(60, cursor, plan, false);
+    const text = formatRestTimerText(60, 60, cursor, plan, false);
 
-    // The exercise name must appear on the "Next:" line
-    assert.ok(text.includes("Next: Bench Press"));
+    assert.ok(text.includes("\u25b7 NEXT:\n  \u2503 BENCH PRESS"));
   });
 
   it("shows BLOCK REST timer line for block rest", () => {
     const plan = makePlan();
     const cursor: WorkoutCursor = { blockIndex: 0, exerciseIndex: 0, roundNumber: 1, phase: "blockRest" };
 
-    const text = formatRestTimerText(90, cursor, plan, true);
-    assert.ok(text.includes("BLOCK REST 1:30"));
+    const text = formatRestTimerText(90, 90, cursor, plan, true);
+    assert.ok(text.includes("\u25b6 BLOCK REST \u2500\u2500 \u2592\u2592\u2592\u2592\u2592\u2592\u2592\u2592\u2592\u2592 1:30"));
   });
 
   it("includes reps and set progress in Next line", () => {
     const plan = makePlan();
     const cursor: WorkoutCursor = { blockIndex: 0, exerciseIndex: 0, roundNumber: 1, phase: "rest" };
 
-    const text = formatRestTimerText(60, cursor, plan, false);
+    const text = formatRestTimerText(60, 60, cursor, plan, false);
 
-    assert.ok(text.includes("Bench Press"));
-    assert.ok(text.includes("10 reps"));
-    assert.ok(text.includes("80kg"));
-    assert.ok(text.includes("Set 1/6"));
+    assert.ok(text.includes("BENCH PRESS"));
+    assert.ok(text.includes("10 REPS"));
+    assert.ok(text.includes("80KG"));
   });
 });
 
@@ -186,11 +190,10 @@ describe("formatCompleteScreen", () => {
     const screen = formatCompleteScreen(plan, 2823, 6, 6);
 
     assert.equal(screen.kind, "textList");
-    assert.ok(screen.content.includes("WORKOUT COMPLETE"));
-    assert.ok(screen.content.includes("Push Day A"));
-    assert.ok(screen.content.includes("2 exercises \u00B7 6 sets"));
+    assert.ok(screen.content.includes("★ WORKOUT COMPLETE ★"));
+    assert.ok(screen.content.includes("PUSH DAY A"));
+    assert.ok(screen.content.includes("Total: 2 exercises · 6 sets"));
     assert.ok(screen.content.includes("Duration: 47min"));
-    assert.ok(screen.content.includes("47min"));
     assert.deepEqual(screen.actions, ["Done"]);
   });
 });
@@ -201,8 +204,8 @@ describe("formatPausedScreen", () => {
     const screen = formatPausedScreen(plan);
 
     assert.equal(screen.kind, "textList");
-    assert.ok(screen.content.includes("PAUSED"));
-    assert.ok(screen.content.includes("Push Day A"));
+    assert.ok(screen.content.includes("▌▌ PAUSED"));
+    assert.ok(screen.content.includes("PUSH DAY A"));
     assert.deepEqual(screen.actions, ["Resume"]);
   });
 });

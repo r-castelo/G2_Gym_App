@@ -33,7 +33,6 @@ export interface ControllerOptions {
 }
 
 export class Controller {
-  private static readonly IDLE_READY_MESSAGE = "FITNESS HUD\n\nTap to select routine\nor start from phone";
   private static readonly IDLE_EMPTY_MESSAGE = "FITNESS HUD\n\nNo plans found\nCreate one on your phone";
   private static readonly ABANDONED_MESSAGE = "FITNESS HUD\n\nWorkout abandoned\n\nTap to select routine\nor start from phone";
 
@@ -85,12 +84,7 @@ export class Controller {
       await this.wakeLock?.acquire();
     } else {
       this.state.setIdle();
-      const plans = this.storage.loadPlans();
-      if (plans.length > 0) {
-        await this.glass.showMessage(Controller.IDLE_READY_MESSAGE);
-      } else {
-        await this.glass.showMessage(Controller.IDLE_EMPTY_MESSAGE);
-      }
+      await this.showIdleScreen();
     }
 
     this.notifySessionChange();
@@ -236,7 +230,7 @@ export class Controller {
     if (mode === "ERROR") {
       if (gesture.kind === "TAP") {
         this.state.setIdle();
-        await this.glass.showMessage(Controller.IDLE_READY_MESSAGE);
+        await this.showIdleScreen();
       }
     }
   }
@@ -327,7 +321,7 @@ export class Controller {
     });
 
     // Render full rest screen (text + action list)
-    const screen = formatRestScreen(seconds, cursor, session.plan, isBlockRest);
+    const screen = formatRestScreen(seconds, seconds, cursor, session.plan, isBlockRest);
     await this.glass.showScreen(screen);
 
     this.timer.start(
@@ -341,6 +335,7 @@ export class Controller {
         // Update ONLY the text container (action list stays the same)
         const text = formatRestTimerText(
           remaining,
+          this.pendingRestTotal,
           this.pendingRestCursor!,
           this.state.session.plan,
           this.pendingIsBlockRest,
@@ -419,7 +414,7 @@ export class Controller {
         this.pendingIsBlockRest = isBlockRest;
 
         const secs = Math.ceil(remaining / 1000);
-        const screen = formatRestScreen(secs, session.cursor, session.plan, isBlockRest);
+        const screen = formatRestScreen(secs, session.timerState.totalSeconds, session.cursor, session.plan, isBlockRest);
         await this.glass.showScreen(screen);
 
         this.timer.resumeFrom(
@@ -428,7 +423,7 @@ export class Controller {
             if (!this.state.session) return;
             this.state.updateTimerState({ ...this.state.session.timerState, remainingSeconds: rem });
             const text = formatRestTimerText(
-              rem, this.pendingRestCursor!, this.state.session.plan, this.pendingIsBlockRest,
+              rem, this.pendingRestTotal, this.pendingRestCursor!, this.state.session.plan, this.pendingIsBlockRest,
             );
             void this.glass.updateText(text);
           },
@@ -472,7 +467,7 @@ export class Controller {
   private async handleCompleteDismiss(): Promise<void> {
     this.state.setIdle();
     this.notifySessionChange();
-    await this.glass.showMessage(Controller.IDLE_READY_MESSAGE);
+    await this.showIdleScreen();
     await this.wakeLock?.release();
   }
 
@@ -514,12 +509,7 @@ export class Controller {
     const session = this.state.session;
 
     if (!session) {
-      const plans = this.storage.loadPlans();
-      if (plans.length > 0) {
-        await this.glass.showMessage(Controller.IDLE_READY_MESSAGE);
-      } else {
-        await this.glass.showMessage(Controller.IDLE_EMPTY_MESSAGE);
-      }
+      await this.showIdleScreen();
       return;
     }
 
@@ -550,11 +540,20 @@ export class Controller {
         break;
       }
       default:
-        await this.glass.showMessage(Controller.IDLE_READY_MESSAGE);
+        await this.showIdleScreen();
     }
   }
 
   // --- Helpers ---
+
+  private async showIdleScreen(): Promise<void> {
+    const plans = this.storage.loadPlans();
+    if (plans.length > 0) {
+      await this.glass.showImageScreen("fitness_hud_icon.png");
+    } else {
+      await this.glass.showMessage(Controller.IDLE_EMPTY_MESSAGE);
+    }
+  }
 
   private persistSession(): void {
     const session = this.state.session;

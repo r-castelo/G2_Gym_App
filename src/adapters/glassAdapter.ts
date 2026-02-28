@@ -8,6 +8,8 @@ import {
   StartUpPageCreateResult,
   TextContainerProperty,
   TextContainerUpgrade,
+  ImageContainerProperty,
+  ImageRawDataUpdate,
   waitForEvenAppBridge,
   type EvenHubEvent,
 } from "@evenrealities/even_hub_sdk";
@@ -71,7 +73,7 @@ export class GlassAdapterImpl implements GlassAdapter {
   async showScreen(screen: GlassScreen): Promise<void> {
     switch (screen.kind) {
       case "textList":
-        await this.renderTextList(screen.content, screen.actions, screen.footer);
+        await this.renderTextList(screen.content, screen.actions, screen.footer, screen.theme);
         this.currentScreenKind = "textList";
         break;
 
@@ -119,10 +121,65 @@ export class GlassAdapterImpl implements GlassAdapter {
       containerName: CONTAINER_NAMES.text,
       isEventCapture: 1,
       content: text.slice(0, 1000),
+      borderWidth: 1,
+      borderColor: 5,
+      borderRdaius: 6,
+      paddingLength: 8,
     });
 
     await this.renderContainers({ textObject: [msgContainer] });
     this.currentScreenKind = "message";
+  }
+
+  /**
+   * Show a full screen image message.
+   * Requires an invisible TextContainer behind it to capture gestures.
+   */
+  async showImageScreen(imageUrl: string): Promise<void> {
+    if (!this.bridge) throw new Error("Not connected");
+
+    const textContainer = new TextContainerProperty({
+      xPosition: 0,
+      yPosition: 0,
+      width: 576,
+      height: 288,
+      containerID: CONTAINER_IDS.text,
+      containerName: CONTAINER_NAMES.text,
+      isEventCapture: 1,
+      content: " ",
+      paddingLength: 0,
+    });
+
+    const imageContainer = new ImageContainerProperty({
+      xPosition: 188,
+      yPosition: 94,
+      width: 200,
+      height: 100,
+      containerID: 10,
+      containerName: "img-idle",
+    });
+
+    await this.renderContainers({
+      textObject: [textContainer],
+      imageObject: [imageContainer],
+    });
+    this.currentScreenKind = "message";
+
+    try {
+      const response = await fetch(imageUrl);
+      const buffer = await response.arrayBuffer();
+      const pngBytes = Array.from(new Uint8Array(buffer));
+
+      await this.bridge.updateImageRawData(
+        new ImageRawDataUpdate({
+          containerID: 10,
+          containerName: "img-idle",
+          imageData: pngBytes,
+        }),
+      );
+    } catch (err) {
+      console.error("[glass] Failed to fetch or update image raw data", err);
+    }
   }
 
   // --- Private rendering ---
@@ -137,9 +194,12 @@ export class GlassAdapterImpl implements GlassAdapter {
     content: string,
     actions: string[],
     footer?: string,
+    theme?: "exercise" | "rest",
   ): Promise<void> {
     const footerText = footer?.trim() ?? "";
     const hasFooter = footerText.length > 0;
+    const isRest = theme === "rest";
+
     const textContainer = new TextContainerProperty({
       xPosition: GLASS_LAYOUT.x,
       yPosition: GLASS_LAYOUT.y,
@@ -149,6 +209,10 @@ export class GlassAdapterImpl implements GlassAdapter {
       containerName: CONTAINER_NAMES.text,
       isEventCapture: 0,
       content: content.slice(0, 1000),
+      borderWidth: isRest ? 2 : 1,
+      borderColor: isRest ? 13 : 5,
+      borderRdaius: 6,
+      paddingLength: 8,
     });
 
     const textContainers: TextContainerProperty[] = [textContainer];
@@ -163,6 +227,9 @@ export class GlassAdapterImpl implements GlassAdapter {
         containerName: CONTAINER_NAMES.footer,
         isEventCapture: 0,
         content: this.rightAlignFooter(footerText).slice(0, 1000),
+        borderWidth: 1,
+        borderColor: 5,
+        borderRdaius: 6,
       }));
     }
 
@@ -174,6 +241,10 @@ export class GlassAdapterImpl implements GlassAdapter {
       containerID: CONTAINER_IDS.action,
       containerName: CONTAINER_NAMES.action,
       isEventCapture: 1,
+      borderWidth: 1,
+      borderColor: 5,
+      borderRdaius: 6,
+      paddingLength: 4,
       itemContainer: new ListItemContainerProperty({
         itemCount: actions.length,
         itemName: actions,
@@ -227,6 +298,10 @@ export class GlassAdapterImpl implements GlassAdapter {
       containerID: CONTAINER_IDS.action,
       containerName: CONTAINER_NAMES.action,
       isEventCapture: 1,
+      borderWidth: 1,
+      borderColor: 5,
+      borderRdaius: 6,
+      paddingLength: 4,
       itemContainer: new ListItemContainerProperty({
         itemCount: items.length,
         itemName: items,
@@ -253,6 +328,10 @@ export class GlassAdapterImpl implements GlassAdapter {
       containerName: CONTAINER_NAMES.text,
       isEventCapture: 1,
       content: content.slice(0, 1000),
+      borderWidth: 1,
+      borderColor: 5,
+      borderRdaius: 6,
+      paddingLength: 8,
     });
 
     await this.renderContainers({ textObject: [textContainer] });
@@ -265,16 +344,20 @@ export class GlassAdapterImpl implements GlassAdapter {
   private async renderContainers(payload: {
     listObject?: ListContainerProperty[];
     textObject?: TextContainerProperty[];
+    imageObject?: ImageContainerProperty[];
   }): Promise<void> {
     if (!this.bridge) throw new Error("Not connected");
 
     const containerTotalNum =
-      (payload.listObject?.length ?? 0) + (payload.textObject?.length ?? 0);
+      (payload.listObject?.length ?? 0) +
+      (payload.textObject?.length ?? 0) +
+      (payload.imageObject?.length ?? 0);
 
     const config = {
       containerTotalNum,
       ...(payload.listObject ? { listObject: payload.listObject } : {}),
       ...(payload.textObject ? { textObject: payload.textObject } : {}),
+      ...(payload.imageObject ? { imageObject: payload.imageObject } : {}),
     };
 
     if (!this.startupDone) {

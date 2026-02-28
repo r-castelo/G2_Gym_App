@@ -8,19 +8,19 @@ export const GLASS_LAYOUT = {
   y: 4,
   textWidth: 560,
   textHeight: 196,
-  textHeightWithFooter: 224,
+  textHeightWithFooter: 216, // Reduced to make room for taller footer
   footerX: 196,
-  footerY: 236,
+  footerY: 228,              // Shifted up
   footerWidth: 372,
-  footerHeight: 40,
+  footerHeight: 48,          // Increased to prevent clipping
   footerPadding: 6,
   actionY: 204,
   actionWidth: 560,
   actionHeight: 80,
   actionXWithFooter: 8,
-  actionYWithFooter: 236,
+  actionYWithFooter: 228,    // Shifted up
   actionWidthWithFooter: 180,
-  actionHeightWithFooter: 40,
+  actionHeightWithFooter: 48, // Increased to prevent clipping
   listFullHeight: 272,
 } as const;
 
@@ -48,7 +48,7 @@ export const CONTAINER_NAMES = {
 } as const;
 
 export const ACTION_LABELS = {
-  done: "\u2713 Done",
+  done: "Done",
   skip: "Skip",
   skipRest: "Skip Rest",
   dismiss: "Done",
