@@ -1,4 +1,3 @@
-// filepath: src/adapters/glassAdapter.ts
 import {
   CreateStartUpPageContainer,
   EvenAppBridge,
@@ -106,31 +105,45 @@ export class GlassAdapterImpl implements GlassAdapter {
   }
 
   private async getOrFetchImage(url: string): Promise<number[]> {
-    // Resolve absolute URL for proper Vite handling
-    const absoluteUrl = new URL(url, window.location.href).href;
-    if (this.imageCache.has(absoluteUrl)) {
-      return this.imageCache.get(absoluteUrl)!;
+    const fetchUrl = new URL(url, window.location.href).href;
+    
+    if (this.imageCache.has(fetchUrl)) {
+      return this.imageCache.get(fetchUrl)!;
     }
     
-    console.log("[glass] Fetching image:", absoluteUrl);
-    const response = await fetch(absoluteUrl);
-    if (!response.ok) throw new Error(`Failed to load image: ${response.statusText}`);
-    
-    const buffer = await response.arrayBuffer();
-    const bytes = Array.from(new Uint8Array(buffer));
-    this.imageCache.set(absoluteUrl, bytes);
-    return bytes;
+    try {
+      const response = await fetch(fetchUrl);
+      const contentType = response.headers.get('content-type');
+      
+      if (contentType && contentType.includes('text/html')) {
+        console.log(`[glass] Missing Image: Vite served HTML instead of image at ${fetchUrl}`);
+        return [];
+      }
+
+      if (!response.ok) {
+        console.log(`[glass] Missing Image: Server returned status ${response.status} for ${fetchUrl}`);
+        return [];
+      }
+      
+      // Pass the raw ArrayBuffer exactly like the Smart Cart example to preserve the 4-bit format
+      const buffer = await response.arrayBuffer();
+      const bytes = Array.from(new Uint8Array(buffer));
+      
+      this.imageCache.set(fetchUrl, bytes);
+      return bytes;
+    } catch (err) {
+      console.log(`[glass] Missing Image: Network error fetching ${fetchUrl} - ${String(err)}`);
+      return [];
+    }
   }
 
   async showImageScreen(imageUrl: string): Promise<void> {
     if (!this.bridge) throw new Error("Not connected");
 
-    let pngBytes: number[];
-    try {
-      // Pre-fetch the bytes to avoid pushing empty layouts
-      pngBytes = await this.getOrFetchImage(imageUrl);
-    } catch (err) {
-      console.error("[glass] Failed to fetch image, falling back to basic text", err);
+    const pngBytes = await this.getOrFetchImage(imageUrl);
+
+    // Gracefully fallback to text if image bytes couldn't be loaded
+    if (pngBytes.length === 0) {
       await this.showMessage("FITNESS HUD\n\nTap to select routine\nor start from phone");
       return;
     }
@@ -140,11 +153,12 @@ export class GlassAdapterImpl implements GlassAdapter {
       yPosition: 0,
       width: 576,
       height: 288,
-      containerID: CONTAINER_IDS.text,
-      containerName: CONTAINER_NAMES.text,
-      isEventCapture: 1,
-      content: " ", // Requires non-empty space to render and capture properly
+      borderWidth: 0,
       paddingLength: 0,
+      containerID: CONTAINER_IDS.splashBg,
+      containerName: CONTAINER_NAMES.splashBg,
+      content: " ", 
+      isEventCapture: 1,
     });
 
     const imageContainer = new ImageContainerProperty({
@@ -152,8 +166,8 @@ export class GlassAdapterImpl implements GlassAdapter {
       yPosition: 94,
       width: 200,
       height: 100,
-      containerID: 10,
-      containerName: "img-idle",
+      containerID: CONTAINER_IDS.splashImg,
+      containerName: CONTAINER_NAMES.splashImg,
     });
 
     // Rebuild the page with both the event capture layer and image layer
@@ -163,16 +177,17 @@ export class GlassAdapterImpl implements GlassAdapter {
     });
     this.currentScreenKind = "image";
 
+    // Push the raw bytes immediately
     try {
       await this.bridge.updateImageRawData(
         new ImageRawDataUpdate({
-          containerID: 10,
-          containerName: "img-idle",
+          containerID: CONTAINER_IDS.splashImg,
+          containerName: CONTAINER_NAMES.splashImg,
           imageData: pngBytes,
         }),
       );
     } catch (err) {
-      console.error("[glass] Failed to update image raw data", err);
+      console.log(`[glass] Failed to update image raw data: ${String(err)}`);
     }
   }
 
@@ -321,21 +336,19 @@ export class GlassAdapterImpl implements GlassAdapter {
   }): Promise<void> {
     if (!this.bridge) throw new Error("Not connected");
 
-    const containerTotalNum =
-      (payload.listObject?.length ?? 0) +
-      (payload.textObject?.length ?? 0) +
-      (payload.imageObject?.length ?? 0);
+    const listCount = payload.listObject?.length ?? 0;
+    const textCount = payload.textObject?.length ?? 0;
+    const imageCount = payload.imageObject?.length ?? 0;
+    const containerTotalNum = listCount + textCount + imageCount;
 
-    const config = {
-      containerTotalNum,
-      ...(payload.listObject ? { listObject: payload.listObject } : {}),
-      ...(payload.textObject ? { textObject: payload.textObject } : {}),
-      ...(payload.imageObject ? { imageObject: payload.imageObject } : {}),
-    };
+    const config: Record<string, any> = { containerTotalNum };
+    if (listCount > 0) config.listObject = payload.listObject;
+    if (textCount > 0) config.textObject = payload.textObject;
+    if (imageCount > 0) config.imageObject = payload.imageObject;
 
     if (!this.startupDone) {
       const result = await this.bridge.createStartUpPageContainer(
-        new CreateStartUpPageContainer(config),
+        new CreateStartUpPageContainer(config as any),
       );
 
       if (result !== StartUpPageCreateResult.success) {
@@ -347,13 +360,13 @@ export class GlassAdapterImpl implements GlassAdapter {
     }
 
     let ok = await this.bridge.rebuildPageContainer(
-      new RebuildPageContainer(config),
+      new RebuildPageContainer(config as any),
     );
 
     if (!ok) {
       await this.delay(300);
       ok = await this.bridge.rebuildPageContainer(
-        new RebuildPageContainer(config),
+        new RebuildPageContainer(config as any),
       );
     }
 
@@ -417,8 +430,6 @@ export class GlassAdapterImpl implements GlassAdapter {
 
     return null;
   }
-
-  // --- Utilities ---
 
   private delay(ms: number): Promise<void> {
     return new Promise((resolve) => setTimeout(resolve, ms));

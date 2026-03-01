@@ -1,3 +1,4 @@
+// filepath: src/app/controller.ts
 import type {
   GestureEvent,
   GlassAdapter,
