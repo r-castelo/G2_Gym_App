@@ -33,9 +33,6 @@ export interface ControllerOptions {
 }
 
 export class Controller {
-  private static readonly IDLE_EMPTY_MESSAGE = "FITNESS HUD\n\nNo plans found\nCreate one on your phone";
-  private static readonly ABANDONED_MESSAGE = "FITNESS HUD\n\nWorkout abandoned\n\nTap to select routine\nor start from phone";
-
   private readonly glass: GlassAdapter;
   private readonly storage: StorageAdapter;
   private readonly wakeLock: WakeLockService | null;
@@ -155,7 +152,7 @@ export class Controller {
     this.state.setIdle();
     this.notifySessionChange();
 
-    await this.glass.showMessage(Controller.ABANDONED_MESSAGE);
+    await this.showIdleScreen();
     await this.wakeLock?.release();
   }
 
@@ -547,12 +544,7 @@ export class Controller {
   // --- Helpers ---
 
   private async showIdleScreen(): Promise<void> {
-    const plans = this.storage.loadPlans();
-    if (plans.length > 0) {
-      await this.glass.showImageScreen("fitness_hud_icon.png");
-    } else {
-      await this.glass.showMessage(Controller.IDLE_EMPTY_MESSAGE);
-    }
+    await this.glass.showImageScreen("fitness_hud_icon.png");
   }
 
   private persistSession(): void {

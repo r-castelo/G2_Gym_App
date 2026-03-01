@@ -1,3 +1,4 @@
+// filepath: src/adapters/glassAdapter.ts
 import {
   CreateStartUpPageContainer,
   EvenAppBridge,
@@ -27,24 +28,8 @@ import type {
   Unsubscribe,
 } from "../types/contracts";
 
-type ScreenKind = "textList" | "list" | "text" | "message" | null;
+type ScreenKind = "textList" | "list" | "text" | "message" | "image" | null;
 
-/**
- * GlassAdapter for the Gym app — TUI-style mixed text+list containers.
- *
- * Screen types:
- * - TextListScreen: text container (top) + list container (bottom actions)
- *   with optional non-interactive footer text appended in the text container
- * - ListScreen: full-page list container (routine selection)
- * - TextScreen: single text container
- *
- * Handles all known SDK quirks:
- * - CLICK_EVENT=0 → undefined
- * - 300ms scroll cooldown
- * - rebuildPageContainer retry after 300ms
- * - Content sliced to 1000/2000 char limits
- * - Short container names (~6 chars)
- */
 export class GlassAdapterImpl implements GlassAdapter {
   private bridge: EvenAppBridge | null = null;
   private unsubscribeHub: Unsubscribe | null = null;
@@ -52,6 +37,7 @@ export class GlassAdapterImpl implements GlassAdapter {
   private currentScreenKind: ScreenKind = null;
   private readonly gestureHandlers = new Set<(e: GestureEvent) => void>();
   private lastScrollTime = 0;
+  private imageCache = new Map<string, number[]>();
 
   async connect(): Promise<void> {
     if (this.bridge) return;
@@ -66,10 +52,6 @@ export class GlassAdapterImpl implements GlassAdapter {
     };
   }
 
-  /**
-   * Show a screen on the glasses. Always triggers a full rebuild
-   * because list containers cannot be updated in-place.
-   */
   async showScreen(screen: GlassScreen): Promise<void> {
     switch (screen.kind) {
       case "textList":
@@ -89,11 +71,6 @@ export class GlassAdapterImpl implements GlassAdapter {
     }
   }
 
-  /**
-   * Lightweight in-place text update for timer ticks.
-   * Only updates the text container — list container stays unchanged.
-   * Max 2000 chars.
-   */
   async updateText(content: string): Promise<void> {
     if (!this.bridge) throw new Error("Not connected");
 
@@ -108,9 +85,6 @@ export class GlassAdapterImpl implements GlassAdapter {
     );
   }
 
-  /**
-   * Show a simple full-screen text message (idle, error, etc).
-   */
   async showMessage(text: string): Promise<void> {
     const msgContainer = new TextContainerProperty({
       xPosition: GLASS_LAYOUT.x,
@@ -131,12 +105,35 @@ export class GlassAdapterImpl implements GlassAdapter {
     this.currentScreenKind = "message";
   }
 
-  /**
-   * Show a full screen image message.
-   * Requires an invisible TextContainer behind it to capture gestures.
-   */
+  private async getOrFetchImage(url: string): Promise<number[]> {
+    // Resolve absolute URL for proper Vite handling
+    const absoluteUrl = new URL(url, window.location.href).href;
+    if (this.imageCache.has(absoluteUrl)) {
+      return this.imageCache.get(absoluteUrl)!;
+    }
+    
+    console.log("[glass] Fetching image:", absoluteUrl);
+    const response = await fetch(absoluteUrl);
+    if (!response.ok) throw new Error(`Failed to load image: ${response.statusText}`);
+    
+    const buffer = await response.arrayBuffer();
+    const bytes = Array.from(new Uint8Array(buffer));
+    this.imageCache.set(absoluteUrl, bytes);
+    return bytes;
+  }
+
   async showImageScreen(imageUrl: string): Promise<void> {
     if (!this.bridge) throw new Error("Not connected");
+
+    let pngBytes: number[];
+    try {
+      // Pre-fetch the bytes to avoid pushing empty layouts
+      pngBytes = await this.getOrFetchImage(imageUrl);
+    } catch (err) {
+      console.error("[glass] Failed to fetch image, falling back to basic text", err);
+      await this.showMessage("FITNESS HUD\n\nTap to select routine\nor start from phone");
+      return;
+    }
 
     const textContainer = new TextContainerProperty({
       xPosition: 0,
@@ -146,7 +143,7 @@ export class GlassAdapterImpl implements GlassAdapter {
       containerID: CONTAINER_IDS.text,
       containerName: CONTAINER_NAMES.text,
       isEventCapture: 1,
-      content: " ",
+      content: " ", // Requires non-empty space to render and capture properly
       paddingLength: 0,
     });
 
@@ -159,17 +156,14 @@ export class GlassAdapterImpl implements GlassAdapter {
       containerName: "img-idle",
     });
 
+    // Rebuild the page with both the event capture layer and image layer
     await this.renderContainers({
       textObject: [textContainer],
       imageObject: [imageContainer],
     });
-    this.currentScreenKind = "message";
+    this.currentScreenKind = "image";
 
     try {
-      const response = await fetch(imageUrl);
-      const buffer = await response.arrayBuffer();
-      const pngBytes = Array.from(new Uint8Array(buffer));
-
       await this.bridge.updateImageRawData(
         new ImageRawDataUpdate({
           containerID: 10,
@@ -178,18 +172,12 @@ export class GlassAdapterImpl implements GlassAdapter {
         }),
       );
     } catch (err) {
-      console.error("[glass] Failed to fetch or update image raw data", err);
+      console.error("[glass] Failed to update image raw data", err);
     }
   }
 
   // --- Private rendering ---
 
-  /**
-   * Render text + list layout:
-   * - Text container at top (info/timer content, isEventCapture=0)
-   * - List container at bottom (action items like Done/Skip, isEventCapture=1)
-   * - Optional footer text container on the same row as actions (isEventCapture=0)
-   */
   private async renderTextList(
     content: string,
     actions: string[],
@@ -258,10 +246,6 @@ export class GlassAdapterImpl implements GlassAdapter {
     });
   }
 
-  /**
-   * Right-align footer text within the footer container.
-   * SDK text containers do not expose a text-align option, so we pad to fit.
-   */
   private rightAlignFooter(text: string): string {
     const normalized = text.replace(/\s+/g, " ").trim();
     if (!normalized) return "";
@@ -274,10 +258,6 @@ export class GlassAdapterImpl implements GlassAdapter {
     return `${" ".repeat(leftPad)}${clipped}`;
   }
 
-  /**
-   * Render full-page list (routine selection).
-   * Title is placed as a text container at the top, list below.
-   */
   private async renderList(title: string, items: string[]): Promise<void> {
     const titleContainer = new TextContainerProperty({
       xPosition: GLASS_LAYOUT.x,
@@ -315,9 +295,6 @@ export class GlassAdapterImpl implements GlassAdapter {
     });
   }
 
-  /**
-   * Render single text container.
-   */
   private async renderText(content: string): Promise<void> {
     const textContainer = new TextContainerProperty({
       xPosition: GLASS_LAYOUT.x,
@@ -337,10 +314,6 @@ export class GlassAdapterImpl implements GlassAdapter {
     await this.renderContainers({ textObject: [textContainer] });
   }
 
-  /**
-   * Unified container rendering. Uses createStartUpPageContainer on first call,
-   * rebuildPageContainer on subsequent calls (with retry on failure).
-   */
   private async renderContainers(payload: {
     listObject?: ListContainerProperty[];
     textObject?: TextContainerProperty[];
@@ -426,7 +399,6 @@ export class GlassAdapterImpl implements GlassAdapter {
     if (eventType === OsEventTypeList.DOUBLE_CLICK_EVENT) {
       return { kind: "DOUBLE_TAP" };
     }
-    // CLICK_EVENT = 0 becomes undefined during SDK deserialization
     if (eventType === OsEventTypeList.CLICK_EVENT || eventType === undefined) {
       return {
         kind: "TAP",
