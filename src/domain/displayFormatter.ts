@@ -25,6 +25,23 @@ function truncate(s: string, max: number): string {
   return s.length > max ? s.slice(0, max - 3) + "..." : s;
 }
 
+function makeContinuousBar(current: number, total: number, length = 16): string {
+  if (total <= 0) return '▒'.repeat(length);
+  const filled = Math.min(length, Math.max(0, Math.round((current / total) * length)));
+  const empty = length - filled;
+  return '█'.repeat(filled) + '▒'.repeat(empty);
+}
+
+function makeDiscreteBar(current: number, total: number, maxLen = 8): string {
+  if (total <= 0) return '';
+  if (total > maxLen) {
+     const filled = Math.min(maxLen, Math.max(0, Math.round((current / total) * maxLen)));
+     return '■'.repeat(filled) + '□'.repeat(maxLen - filled);
+  }
+  const safeCurrent = Math.min(current, total);
+  return '■'.repeat(safeCurrent) + '□'.repeat(total - safeCurrent);
+}
+
 export function formatReps(r: RepSpec): string {
   switch (r.type) {
     case "fixed": return `${r.value} reps`;
@@ -54,7 +71,7 @@ export function formatLoad(l: LoadSpec, _unit?: WeightUnit): string {
  * │  NEXT: Incline Fly 14kg 12 reps        │
  * │                                  63%    │
  * │                                         │
- * │  [ ✓ Done ]  [ Skip ]                   │
+ * │  [ Done ]  [ Skip ]                     │
  * └─────────────────────────────────────────┘
  */
 export function formatExerciseScreen(
@@ -65,33 +82,46 @@ export function formatExerciseScreen(
   setsCompleted: number,
   totalSets: number,
 ): TextListScreen {
-  const blockLine = `Block ${cursor.blockIndex + 1} out of ${plan.blocks.length} \u00B7 ${truncate(block.name, 32)}`;
-  const divider = "-".repeat(39);
+  const blockBar = makeDiscreteBar(cursor.blockIndex + 1, plan.blocks.length, 6);
+  const blockLine = `BLOCK ${cursor.blockIndex + 1}/${plan.blocks.length} ${blockBar} · ${truncate(block.name, 16).toUpperCase()}`;
+  const divider = "━━━━━━━━━━━━━━━━━━━━━━━━━━";
   const currentSet = blockSetProgress(cursor, plan);
+  const setBar = makeDiscreteBar(currentSet.current, currentSet.total, 8);
   const nowLoad = formatLoad(exercise.prescribedLoad);
-  const nowLoadPart = nowLoad ? ` \u00B7 ${nowLoad.toUpperCase()}` : "";
-  const nowLine = `NOW: ${exercise.name.toUpperCase()} ${formatReps(exercise.prescribedReps).toUpperCase()}${nowLoadPart} \u00B7 Set ${currentSet.current}/${currentSet.total}`;
+  const nowLoadPart = nowLoad ? ` · ${nowLoad.toUpperCase()}` : "";
+  
+  // Use vertical bar to simulate a highlighted container block
+  const nowLine = `▶ NOW:\n  ┃ ${exercise.name.toUpperCase()}\n  ┃ ${formatReps(exercise.prescribedReps).toUpperCase()}${nowLoadPart}`;
 
   const nextResult = nextStep(cursor, plan);
-  let nextLine = "Next: Workout Complete";
+  let nextLine = "▷ NEXT: Workout Complete";
   if (!nextResult.done) {
     const nextInfo = getExerciseAtCursor(nextResult.cursor, plan);
-    const nextSet = blockSetProgress(nextResult.cursor, plan);
     if (nextInfo) {
       const nextLoad = formatLoad(nextInfo.exercise.prescribedLoad);
-      const nextLoadPart = nextLoad ? ` \u00B7 ${nextLoad}` : "";
-      nextLine = `Next: ${nextInfo.exercise.name} ${formatReps(nextInfo.exercise.prescribedReps)}${nextLoadPart} \u00B7 Set ${nextSet.current}/${nextSet.total}`;
+      const nextLoadPart = nextLoad ? ` · ${nextLoad.toUpperCase()}` : "";
+      nextLine = `▷ NEXT:\n  ┃ ${truncate(nextInfo.exercise.name, 16).toUpperCase()}\n  ┃ ${formatReps(nextInfo.exercise.prescribedReps).toUpperCase()}${nextLoadPart}`;
     }
   }
 
-  const pct = totalSets > 0 ? Math.round((setsCompleted / totalSets) * 100) : 0;
-  const footer = `${truncate(plan.name, 20)} \u00B7 ${pct}% Completed`;
+  // Multiply by 2 so completing a rest advances the bar as well
+  const stepsCompleted = setsCompleted * 2;
+  const totalSteps = totalSets * 2;
+  const footerBar = makeContinuousBar(stepsCompleted, totalSteps, 16);
+  const footer = `${truncate(plan.name, 12)} ${footerBar}`;
 
   return {
     kind: "textList",
-    content: [blockLine, "", divider, nowLine, divider, nextLine].join("\n"),
-    actions: ["Done", ACTION_LABELS.skip],
+    content: [
+      blockLine,
+      `Set ${currentSet.current}/${currentSet.total}  ${setBar}`,
+      divider,
+      nowLine,
+      nextLine
+    ].join("\n"),
+    actions: [ACTION_LABELS.done, ACTION_LABELS.skip],
     footer,
+    theme: "exercise"
   };
 }
 
@@ -110,6 +140,7 @@ export function formatExerciseScreen(
  */
 export function formatRestScreen(
   remainingSeconds: number,
+  totalSeconds: number,
   cursor: WorkoutCursor,
   plan: TrainingPlan,
   isBlockRest: boolean,
@@ -117,14 +148,19 @@ export function formatRestScreen(
   const totalSets = countTotalSets(plan);
   const estimatedCompleted = flatSetIndex(cursor, plan) - 1;
   const setsCompleted = Math.max(0, Math.min(totalSets, estimatedCompleted));
-  const pct = totalSets > 0 ? Math.round((setsCompleted / totalSets) * 100) : 0;
-  const footer = `${truncate(plan.name, 20)} \u00B7 ${pct}% Completed`;
+  
+  // We are currently IN the rest block, so add 1 step
+  const stepsCompleted = Math.max(0, setsCompleted * 2 - 1);
+  const totalSteps = totalSets * 2;
+  const footerBar = makeContinuousBar(stepsCompleted, totalSteps, 16);
+  const footer = `${truncate(plan.name, 12)} ${footerBar}`;
 
   return {
     kind: "textList",
-    content: formatRestTimerText(remainingSeconds, cursor, plan, isBlockRest),
-    actions: [ACTION_LABELS.skipRest],
+    content: formatRestTimerText(remainingSeconds, totalSeconds, cursor, plan, isBlockRest),
+    actions: ["Skip Rest"],
     footer,
+    theme: "rest",
   };
 }
 
@@ -134,6 +170,7 @@ export function formatRestScreen(
  */
 export function formatRestTimerText(
   remainingSeconds: number,
+  totalSeconds: number,
   cursor: WorkoutCursor,
   plan: TrainingPlan,
   isBlockRest: boolean,
@@ -141,25 +178,29 @@ export function formatRestTimerText(
   const mins = Math.floor(remainingSeconds / 60);
   const secs = remainingSeconds % 60;
   const timeStr = `${mins}:${secs.toString().padStart(2, "0")}`;
-  const divider = "-".repeat(39);
+  const divider = "━━━━━━━━━━━━━━━━━━━━━━━━━━";
   const block = plan.blocks[cursor.blockIndex];
+  
+  const blockBar = makeDiscreteBar(cursor.blockIndex + 1, plan.blocks.length, 6);
   const blockName = block?.name || `Block ${cursor.blockIndex + 1}`;
-  const blockLine = `Block ${cursor.blockIndex + 1} out of ${plan.blocks.length} \u00B7 ${truncate(blockName, 32)}`;
+  const blockLine = `BLOCK ${cursor.blockIndex + 1}/${plan.blocks.length} ${blockBar} · ${truncate(blockName, 16).toUpperCase()}`;
 
   const restLabel = isBlockRest ? "BLOCK REST" : "REST";
-  const timerLine = `${restLabel} ${timeStr}`;
+  const elapsed = Math.max(0, totalSeconds - remainingSeconds);
+  const restBar = makeContinuousBar(elapsed, totalSeconds, 10);
+  const timerLine = `▶ ${restLabel} ── ${restBar} ${timeStr}`;
+
   const nextInfo = getExerciseAtCursor(cursor, plan);
-  const nextSet = blockSetProgress(cursor, plan);
-  let nextLine = "Next: Workout Complete";
+  let nextLine = "▷ NEXT: Workout Complete";
   if (nextInfo) {
     const nextLoad = formatLoad(nextInfo.exercise.prescribedLoad);
-    const nextLoadPart = nextLoad ? ` \u00B7 ${nextLoad}` : "";
-    nextLine = `Next: ${nextInfo.exercise.name} ${formatReps(nextInfo.exercise.prescribedReps)}${nextLoadPart} \u00B7 Set ${nextSet.current}/${nextSet.total}`;
+    const nextLoadPart = nextLoad ? ` · ${nextLoad.toUpperCase()}` : "";
+    // Emphasize the upcoming exercise just like we highlight "NOW"
+    nextLine = `▷ NEXT:\n  ┃ ${nextInfo.exercise.name.toUpperCase()}\n  ┃ ${formatReps(nextInfo.exercise.prescribedReps).toUpperCase()}${nextLoadPart}`;
   }
 
   const lines = [
     blockLine,
-    "",
     divider,
     timerLine,
     divider,
@@ -173,7 +214,7 @@ export function formatRestTimerText(
  * Format the WORKOUT_COMPLETE screen.
  *
  * ┌─────────────────────────────────────────┐
- * │  WORKOUT COMPLETE ✓                     │
+ * │  WORKOUT COMPLETE                       │
  * │                                         │
  * │  Push Day                               │
  * │  5 exercises · 20 sets                  │
@@ -195,17 +236,17 @@ export function formatCompleteScreen(
   const setLabel = totalSets === 1 ? "set" : "sets";
 
   const lines = [
-    "WORKOUT COMPLETE \u2713",
-    "",
-    truncate(plan.name, MAX_NAME_LEN),
-    `${totalExercises} ${exerciseLabel} \u00B7 ${totalSets} ${setLabel}`,
+    "WORKOUT COMPLETE",
+    "━━━━━━━━━━━━━━━━━━━━━━━━━━",
+    truncate(plan.name, MAX_NAME_LEN).toUpperCase(),
+    `Total: ${totalExercises} ${exerciseLabel} · ${totalSets} ${setLabel}`,
     `Duration: ${duration}`,
   ];
 
   return {
     kind: "textList",
     content: lines.join("\n"),
-    actions: [ACTION_LABELS.dismiss],
+    actions: [ACTION_LABELS.done],
   };
 }
 
@@ -216,9 +257,9 @@ export function formatPausedScreen(
   plan: TrainingPlan,
 ): TextListScreen {
   const lines = [
-    "PAUSED",
-    "",
-    truncate(plan.name, MAX_NAME_LEN),
+    "▌▌ PAUSED",
+    "━━━━━━━━━━━━━━━━━━━━━━━━━━",
+    truncate(plan.name, MAX_NAME_LEN).toUpperCase(),
   ];
 
   return {
