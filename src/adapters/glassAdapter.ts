@@ -8,6 +8,8 @@ import {
   StartUpPageCreateResult,
   TextContainerProperty,
   TextContainerUpgrade,
+  ImageContainerProperty,
+  ImageRawDataUpdate,
   waitForEvenAppBridge,
   type EvenHubEvent,
 } from "@evenrealities/even_hub_sdk";
@@ -25,24 +27,8 @@ import type {
   Unsubscribe,
 } from "../types/contracts";
 
-type ScreenKind = "textList" | "list" | "text" | "message" | null;
+type ScreenKind = "textList" | "list" | "text" | "message" | "image" | null;
 
-/**
- * GlassAdapter for the Gym app — TUI-style mixed text+list containers.
- *
- * Screen types:
- * - TextListScreen: text container (top) + list container (bottom actions)
- *   with optional non-interactive footer text appended in the text container
- * - ListScreen: full-page list container (routine selection)
- * - TextScreen: single text container
- *
- * Handles all known SDK quirks:
- * - CLICK_EVENT=0 → undefined
- * - 300ms scroll cooldown
- * - rebuildPageContainer retry after 300ms
- * - Content sliced to 1000/2000 char limits
- * - Short container names (~6 chars)
- */
 export class GlassAdapterImpl implements GlassAdapter {
   private bridge: EvenAppBridge | null = null;
   private unsubscribeHub: Unsubscribe | null = null;
@@ -50,6 +36,7 @@ export class GlassAdapterImpl implements GlassAdapter {
   private currentScreenKind: ScreenKind = null;
   private readonly gestureHandlers = new Set<(e: GestureEvent) => void>();
   private lastScrollTime = 0;
+  private imageCache = new Map<string, number[]>();
 
   async connect(): Promise<void> {
     if (this.bridge) return;
@@ -64,14 +51,10 @@ export class GlassAdapterImpl implements GlassAdapter {
     };
   }
 
-  /**
-   * Show a screen on the glasses. Always triggers a full rebuild
-   * because list containers cannot be updated in-place.
-   */
   async showScreen(screen: GlassScreen): Promise<void> {
     switch (screen.kind) {
       case "textList":
-        await this.renderTextList(screen.content, screen.actions, screen.footer);
+        await this.renderTextList(screen.content, screen.actions, screen.footer, screen.theme);
         this.currentScreenKind = "textList";
         break;
 
@@ -87,11 +70,6 @@ export class GlassAdapterImpl implements GlassAdapter {
     }
   }
 
-  /**
-   * Lightweight in-place text update for timer ticks.
-   * Only updates the text container — list container stays unchanged.
-   * Max 2000 chars.
-   */
   async updateText(content: string): Promise<void> {
     if (!this.bridge) throw new Error("Not connected");
 
@@ -106,9 +84,6 @@ export class GlassAdapterImpl implements GlassAdapter {
     );
   }
 
-  /**
-   * Show a simple full-screen text message (idle, error, etc).
-   */
   async showMessage(text: string): Promise<void> {
     const msgContainer = new TextContainerProperty({
       xPosition: GLASS_LAYOUT.x,
@@ -119,27 +94,115 @@ export class GlassAdapterImpl implements GlassAdapter {
       containerName: CONTAINER_NAMES.text,
       isEventCapture: 1,
       content: text.slice(0, 1000),
+      borderWidth: 1,
+      borderColor: 5,
+      borderRdaius: 6,
+      paddingLength: 8,
     });
 
     await this.renderContainers({ textObject: [msgContainer] });
     this.currentScreenKind = "message";
   }
 
+  private async getOrFetchImage(url: string): Promise<number[]> {
+    const fetchUrl = new URL(url, window.location.href).href;
+    
+    if (this.imageCache.has(fetchUrl)) {
+      return this.imageCache.get(fetchUrl)!;
+    }
+    
+    try {
+      const response = await fetch(fetchUrl);
+      const contentType = response.headers.get('content-type');
+      
+      if (contentType && contentType.includes('text/html')) {
+        console.log(`[glass] Missing Image: Vite served HTML instead of image at ${fetchUrl}`);
+        return [];
+      }
+
+      if (!response.ok) {
+        console.log(`[glass] Missing Image: Server returned status ${response.status} for ${fetchUrl}`);
+        return [];
+      }
+      
+      // Pass the raw ArrayBuffer exactly like the Smart Cart example to preserve the 4-bit format
+      const buffer = await response.arrayBuffer();
+      const bytes = Array.from(new Uint8Array(buffer));
+      
+      this.imageCache.set(fetchUrl, bytes);
+      return bytes;
+    } catch (err) {
+      console.log(`[glass] Missing Image: Network error fetching ${fetchUrl} - ${String(err)}`);
+      return [];
+    }
+  }
+
+  async showImageScreen(imageUrl: string): Promise<void> {
+    if (!this.bridge) throw new Error("Not connected");
+
+    const pngBytes = await this.getOrFetchImage(imageUrl);
+
+    // Gracefully fallback to text if image bytes couldn't be loaded
+    if (pngBytes.length === 0) {
+      await this.showMessage("FITNESS HUD\n\nTap to select routine\nor start from phone");
+      return;
+    }
+
+    const textContainer = new TextContainerProperty({
+      xPosition: 0,
+      yPosition: 0,
+      width: 576,
+      height: 288,
+      borderWidth: 0,
+      paddingLength: 0,
+      containerID: CONTAINER_IDS.splashBg,
+      containerName: CONTAINER_NAMES.splashBg,
+      content: " ", 
+      isEventCapture: 1,
+    });
+
+    const imageContainer = new ImageContainerProperty({
+      xPosition: 188,
+      yPosition: 94,
+      width: 200,
+      height: 100,
+      containerID: CONTAINER_IDS.splashImg,
+      containerName: CONTAINER_NAMES.splashImg,
+    });
+
+    // Rebuild the page with both the event capture layer and image layer
+    await this.renderContainers({
+      textObject: [textContainer],
+      imageObject: [imageContainer],
+    });
+    this.currentScreenKind = "image";
+
+    // Push the raw bytes immediately
+    try {
+      await this.bridge.updateImageRawData(
+        new ImageRawDataUpdate({
+          containerID: CONTAINER_IDS.splashImg,
+          containerName: CONTAINER_NAMES.splashImg,
+          imageData: pngBytes,
+        }),
+      );
+    } catch (err) {
+      console.log(`[glass] Failed to update image raw data: ${String(err)}`);
+    }
+  }
+
   // --- Private rendering ---
 
-  /**
-   * Render text + list layout:
-   * - Text container at top (info/timer content, isEventCapture=0)
-   * - List container at bottom (action items like Done/Skip, isEventCapture=1)
-   * - Optional footer text container on the same row as actions (isEventCapture=0)
-   */
   private async renderTextList(
     content: string,
     actions: string[],
     footer?: string,
+    theme?: "exercise" | "rest",
   ): Promise<void> {
     const footerText = footer?.trim() ?? "";
     const hasFooter = footerText.length > 0;
+    const isRest = theme === "rest";
+
     const textContainer = new TextContainerProperty({
       xPosition: GLASS_LAYOUT.x,
       yPosition: GLASS_LAYOUT.y,
@@ -149,6 +212,10 @@ export class GlassAdapterImpl implements GlassAdapter {
       containerName: CONTAINER_NAMES.text,
       isEventCapture: 0,
       content: content.slice(0, 1000),
+      borderWidth: isRest ? 2 : 1,
+      borderColor: isRest ? 13 : 5,
+      borderRdaius: 6,
+      paddingLength: 8,
     });
 
     const textContainers: TextContainerProperty[] = [textContainer];
@@ -163,6 +230,9 @@ export class GlassAdapterImpl implements GlassAdapter {
         containerName: CONTAINER_NAMES.footer,
         isEventCapture: 0,
         content: this.rightAlignFooter(footerText).slice(0, 1000),
+        borderWidth: 1,
+        borderColor: 5,
+        borderRdaius: 6,
       }));
     }
 
@@ -174,6 +244,10 @@ export class GlassAdapterImpl implements GlassAdapter {
       containerID: CONTAINER_IDS.action,
       containerName: CONTAINER_NAMES.action,
       isEventCapture: 1,
+      borderWidth: 1,
+      borderColor: 5,
+      borderRdaius: 6,
+      paddingLength: 4,
       itemContainer: new ListItemContainerProperty({
         itemCount: actions.length,
         itemName: actions,
@@ -187,10 +261,6 @@ export class GlassAdapterImpl implements GlassAdapter {
     });
   }
 
-  /**
-   * Right-align footer text within the footer container.
-   * SDK text containers do not expose a text-align option, so we pad to fit.
-   */
   private rightAlignFooter(text: string): string {
     const normalized = text.replace(/\s+/g, " ").trim();
     if (!normalized) return "";
@@ -203,10 +273,6 @@ export class GlassAdapterImpl implements GlassAdapter {
     return `${" ".repeat(leftPad)}${clipped}`;
   }
 
-  /**
-   * Render full-page list (routine selection).
-   * Title is placed as a text container at the top, list below.
-   */
   private async renderList(title: string, items: string[]): Promise<void> {
     const titleContainer = new TextContainerProperty({
       xPosition: GLASS_LAYOUT.x,
@@ -227,6 +293,10 @@ export class GlassAdapterImpl implements GlassAdapter {
       containerID: CONTAINER_IDS.action,
       containerName: CONTAINER_NAMES.action,
       isEventCapture: 1,
+      borderWidth: 1,
+      borderColor: 5,
+      borderRdaius: 6,
+      paddingLength: 4,
       itemContainer: new ListItemContainerProperty({
         itemCount: items.length,
         itemName: items,
@@ -240,9 +310,6 @@ export class GlassAdapterImpl implements GlassAdapter {
     });
   }
 
-  /**
-   * Render single text container.
-   */
   private async renderText(content: string): Promise<void> {
     const textContainer = new TextContainerProperty({
       xPosition: GLASS_LAYOUT.x,
@@ -253,33 +320,35 @@ export class GlassAdapterImpl implements GlassAdapter {
       containerName: CONTAINER_NAMES.text,
       isEventCapture: 1,
       content: content.slice(0, 1000),
+      borderWidth: 1,
+      borderColor: 5,
+      borderRdaius: 6,
+      paddingLength: 8,
     });
 
     await this.renderContainers({ textObject: [textContainer] });
   }
 
-  /**
-   * Unified container rendering. Uses createStartUpPageContainer on first call,
-   * rebuildPageContainer on subsequent calls (with retry on failure).
-   */
   private async renderContainers(payload: {
     listObject?: ListContainerProperty[];
     textObject?: TextContainerProperty[];
+    imageObject?: ImageContainerProperty[];
   }): Promise<void> {
     if (!this.bridge) throw new Error("Not connected");
 
-    const containerTotalNum =
-      (payload.listObject?.length ?? 0) + (payload.textObject?.length ?? 0);
+    const listCount = payload.listObject?.length ?? 0;
+    const textCount = payload.textObject?.length ?? 0;
+    const imageCount = payload.imageObject?.length ?? 0;
+    const containerTotalNum = listCount + textCount + imageCount;
 
-    const config = {
-      containerTotalNum,
-      ...(payload.listObject ? { listObject: payload.listObject } : {}),
-      ...(payload.textObject ? { textObject: payload.textObject } : {}),
-    };
+    const config: Record<string, any> = { containerTotalNum };
+    if (listCount > 0) config.listObject = payload.listObject;
+    if (textCount > 0) config.textObject = payload.textObject;
+    if (imageCount > 0) config.imageObject = payload.imageObject;
 
     if (!this.startupDone) {
       const result = await this.bridge.createStartUpPageContainer(
-        new CreateStartUpPageContainer(config),
+        new CreateStartUpPageContainer(config as any),
       );
 
       if (result !== StartUpPageCreateResult.success) {
@@ -291,13 +360,13 @@ export class GlassAdapterImpl implements GlassAdapter {
     }
 
     let ok = await this.bridge.rebuildPageContainer(
-      new RebuildPageContainer(config),
+      new RebuildPageContainer(config as any),
     );
 
     if (!ok) {
       await this.delay(300);
       ok = await this.bridge.rebuildPageContainer(
-        new RebuildPageContainer(config),
+        new RebuildPageContainer(config as any),
       );
     }
 
@@ -343,7 +412,6 @@ export class GlassAdapterImpl implements GlassAdapter {
     if (eventType === OsEventTypeList.DOUBLE_CLICK_EVENT) {
       return { kind: "DOUBLE_TAP" };
     }
-    // CLICK_EVENT = 0 becomes undefined during SDK deserialization
     if (eventType === OsEventTypeList.CLICK_EVENT || eventType === undefined) {
       return {
         kind: "TAP",
@@ -362,8 +430,6 @@ export class GlassAdapterImpl implements GlassAdapter {
 
     return null;
   }
-
-  // --- Utilities ---
 
   private delay(ms: number): Promise<void> {
     return new Promise((resolve) => setTimeout(resolve, ms));

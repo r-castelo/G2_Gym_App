@@ -8,19 +8,19 @@ export const GLASS_LAYOUT = {
   y: 4,
   textWidth: 560,
   textHeight: 196,
-  textHeightWithFooter: 224,
+  textHeightWithFooter: 216, 
   footerX: 196,
-  footerY: 236,
+  footerY: 228,              
   footerWidth: 372,
-  footerHeight: 40,
+  footerHeight: 48,          
   footerPadding: 6,
   actionY: 204,
   actionWidth: 560,
   actionHeight: 80,
   actionXWithFooter: 8,
-  actionYWithFooter: 236,
+  actionYWithFooter: 228,    
   actionWidthWithFooter: 180,
-  actionHeightWithFooter: 40,
+  actionHeightWithFooter: 48, 
   listFullHeight: 272,
 } as const;
 
@@ -39,16 +39,20 @@ export const CONTAINER_IDS = {
   text: 1,
   action: 2,
   footer: 3,
+  splashBg: 3, // Safe to reuse ID 3, never on screen at the same time as the workout footer
+  splashImg: 4,
 } as const;
 
 export const CONTAINER_NAMES = {
   text: "txtin",
   action: "actls",
   footer: "fttxt",
+  splashBg: "splash-bg",
+  splashImg: "splash-img",
 } as const;
 
 export const ACTION_LABELS = {
-  done: "\u2713 Done",
+  done: "Done",
   skip: "Skip",
   skipRest: "Skip Rest",
   dismiss: "Done",

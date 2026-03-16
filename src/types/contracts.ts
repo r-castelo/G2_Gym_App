@@ -40,6 +40,7 @@ export interface TextListScreen {
   content: string;
   actions: string[];
   footer?: string;
+  theme?: "exercise" | "rest";
 }
 
 export interface ListScreen {
@@ -160,6 +161,7 @@ export interface GlassAdapter {
   showScreen(screen: GlassScreen): Promise<void>;
   updateText(content: string): Promise<void>;
   showMessage(text: string): Promise<void>;
+  showImageScreen(imageUrl: string): Promise<void>;
 }
 
 export interface StorageAdapter {
